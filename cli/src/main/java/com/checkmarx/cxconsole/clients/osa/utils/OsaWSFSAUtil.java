@@ -92,14 +92,6 @@ public class OsaWSFSAUtil {
             setResolveDependencies(ret, "false");
         }
         ret.put("acceptExtensionsList", ACCEPT_EXTENSIONS_LISTS);
-//        ret.put("maven.environmentPath", "\\\\storage\\temp\\Idana\\apache-maven-3.5.0\\bin");
-//        ret.put("followSymbolicLinks", "false");
-//        if (!Strings.isNullOrEmpty(cliosaParameters.getOsaDockerImageName())) {
-//            ret.put("docker.scanImages", "true");
-//            ret.put("docker.includes", cliosaParameters.getOsaDockerImageName());
-//            ret.put("docker.excludes", cliosaParameters.getExcludeDockerPattern());
-//            log.info("OSA Docker image scan: " + cliosaParameters.getOsaDockerImageName());
-//        }
 
         return ret;
     }
