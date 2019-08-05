@@ -8,7 +8,6 @@ import com.google.common.base.Strings;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.whitesource.fs.ComponentScan;
-import org.whitesource.fs.FSAConfigProperties;
 
 import java.nio.charset.Charset;
 import java.util.Objects;
@@ -41,8 +40,8 @@ public class OsaWSFSAUtil {
         return String.format("%s/CxWebClient/SPA/#/viewer/project/%s", url, projectId);
     }
 
-    private static FSAConfigProperties generateOsaScanProperties(String[] osaLocationPath, CLIOSAParameters cliosaParameters) {
-        FSAConfigProperties ret = new FSAConfigProperties();
+    private static Properties generateOsaScanProperties(String[] osaLocationPath, CLIOSAParameters cliosaParameters) {
+        Properties ret = new Properties();
 //        if ((osaLocationPath[0] == null) && (
 //                !Strings.isNullOrEmpty(cliosaParameters.getOsaDockerImageName()) ||
 //                        !Strings.isNullOrEmpty(cliosaParameters.getExcludeDockerPattern()))) {
@@ -93,6 +92,7 @@ public class OsaWSFSAUtil {
             setResolveDependencies(ret, "false");
         }
         ret.put("acceptExtensionsList", ACCEPT_EXTENSIONS_LISTS);
+//        ret.put("maven.environmentPath", "\\\\storage\\temp\\Idana\\apache-maven-3.5.0\\bin");
 //        ret.put("followSymbolicLinks", "false");
 //        if (!Strings.isNullOrEmpty(cliosaParameters.getOsaDockerImageName())) {
 //            ret.put("docker.scanImages", "true");
@@ -150,7 +150,7 @@ public class OsaWSFSAUtil {
         String osaDependenciesJson = null;
         try {
             ObjectMapper mapper = new ObjectMapper();
-            FSAConfigProperties scannerProperties = generateOsaScanProperties(osaLocationPath, cliosaParametersr);
+            Properties scannerProperties = generateOsaScanProperties(osaLocationPath, cliosaParametersr);
             log.trace("Scanner properties: " + mapper.writerWithDefaultPrettyPrinter().writeValueAsString(scannerProperties.toString()));
             log.info("Generated FSA properties for analysis");
             ComponentScan componentScan = new ComponentScan(scannerProperties);
