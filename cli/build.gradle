@@ -19,9 +19,9 @@ repositories {
 
 group = 'com.checkmarx'
 //For development purpose
-version = '9.00.0' + "-" + getDate()
+version = '9.20.0' + "-" + getDate()
 //For release purpose
-//version = '9.00.0'
+//version = '9.20.0'
 compileJava.options.encoding = 'UTF-8'
 compileJava.sourceCompatibility = 8
 compileJava.targetCompatibility = 8
@@ -103,13 +103,13 @@ distributions {
                 filter(FixCrLfFilter.class,
                         eol: FixCrLfFilter.CrLf.newInstance("lf"))
             }
-            from('src/main/scripts/V870') {
+            from('src/main/scripts/V900') {
                 filter {
                     it.replaceAll('cx_console\\.jar', jar.archiveName)
                 }
                 filter(FixCrLfFilter.class,
                         eol: FixCrLfFilter.CrLf.newInstance("lf"))
-                into 'Examples\\V870'
+                into 'Examples\\V900'
             }
             from('src/main') {
                 include 'config/krb5.conf'
