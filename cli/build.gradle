@@ -19,7 +19,7 @@ repositories {
 
 group = 'com.checkmarx'
 //For development purpose
-version = '9.00.0' + "-" + getDate()
+version = '9.00.1' + "-" + getDate()
 //For release purpose
 //version = '9.00.0'
 compileJava.options.encoding = 'UTF-8'
@@ -76,7 +76,7 @@ dependencies {
             'org.bouncycastle:bcprov-jdk15on:1.60',
             'com.google.guava:guava:24.1.1-jre',
             'org.codehaus.plexus:plexus-archiver:3.6.0'
-    compile('org.whitesource:whitesource-fs-agent:18.3.1.1') {
+    compile('org.whitesource:whitesource-fs-agent:18.7.2') {
         exclude group: 'io.vertx:vertx-core'
         exclude group: 'io.vertx:vertx-web'
         exclude group: 'org.bouncycastle:bcprov-jdk15on'
