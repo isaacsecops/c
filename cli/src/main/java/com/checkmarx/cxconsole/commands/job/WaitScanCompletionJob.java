@@ -12,6 +12,7 @@ import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 class WaitScanCompletionJob implements Callable<Boolean> {
 
@@ -33,16 +34,12 @@ class WaitScanCompletionJob implements Callable<Boolean> {
         int retriesNum = ConfigMgr.getCfgMgr().getIntProperty(ConfigMgr.KEY_RETIRES);
         int getStatusInterval = ConfigMgr.getCfgMgr().getIntProperty(ConfigMgr.KEY_PROGRESS_INTERVAL);
 
-        long currTime;
-        long prevTime;
-        long exceededTime;
         int progressRequestAttempt = 0;
         boolean jobCompleted;
 
         try {
             log.trace(cxRestSASTClient.getScanQueueResponse(scanId).toString());
             do {
-                currTime = System.currentTimeMillis();
                 ScanQueueDTO scanQueueResponse = cxRestSASTClient.getScanQueueResponse(scanId);
                 StageDTO currentStageDTO = scanQueueResponse.getStageDTO();
 
@@ -81,13 +78,10 @@ class WaitScanCompletionJob implements Callable<Boolean> {
                     continue;
                 }
 
-                prevTime = currTime;
-                currTime = System.currentTimeMillis();
-                exceededTime = (currTime - prevTime) / 1000;
-                //Check, maybe no need to wait, and another request should be sent
-                while (exceededTime < getStatusInterval && !jobCompleted) {
-                    currTime = System.currentTimeMillis();
-                    exceededTime = (currTime - prevTime) / 1000;
+                try {
+                    TimeUnit.SECONDS.sleep(getStatusInterval);
+                } catch (InterruptedException e) {
+                    log.error(e.getMessage(), e);
                 }
             } while (!jobCompleted);
         } catch (CxRestSASTClientException e) {
