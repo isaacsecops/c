@@ -76,7 +76,7 @@ dependencies {
             'org.bouncycastle:bcprov-jdk15on:1.60',
             'com.google.guava:guava:24.1.1-jre',
             'org.codehaus.plexus:plexus-archiver:3.6.0'
-	compile('com.checkmarx:cx-ws-fs-agent:18.7.2.1') {
+    compile('org.whitesource:whitesource-fs-agent:18.7.2-fix') {
         exclude group: 'io.vertx:vertx-core'
         exclude group: 'io.vertx:vertx-web'
         exclude group: 'org.bouncycastle:bcprov-jdk15on'
@@ -85,6 +85,8 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-log4j12'
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-databind'
+        exclude group: 'org.codehaus.plexus', module: 'plexus-archiver'
+        exclude group: 'org.codehaus.plexus', module: 'plexus-archiver'
         exclude group: 'org.codehaus.plexus', module: 'plexus-archiver'
         exclude group: 'org.apache.commons', module: 'commons-compress'
         exclude group: 'com.github.junrar', module:'junrar'
