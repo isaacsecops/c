@@ -18,10 +18,12 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.message.BasicHeader;
 import org.apache.log4j.Logger;
@@ -46,7 +48,10 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
     private static final Header CLI_CONTENT_TYPE_AND_VERSION_HEADER = new BasicHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType() + ";v=1.0");
     private static final Header CLI_ACCEPT_HEADER_AND_VERSION_HEADER = new BasicHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.getMimeType() + ";v=1.0");
 
+    private static Header authHeader;
+
     public CxRestSASTClientImpl(CxRestLoginClient restClient) {
+        authHeader = restClient.getAuthHeader();
         this.apacheClient = restClient.getClient();
         this.hostName = restClient.getHostName();
     }
@@ -59,6 +64,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             getRequest = RequestBuilder.get()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildGetSastPresetsURL(new URL(hostName))))
+                    .setHeader(authHeader)
                     .setHeader(CLI_ACCEPT_HEADER_AND_VERSION_HEADER)
                     .build();
             response = apacheClient.execute(getRequest);
@@ -80,6 +86,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             getRequest = RequestBuilder.get()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildGetEngineConfigurationURL(new URL(hostName))))
+                    .setHeader(authHeader)
                     .setHeader(CLI_ACCEPT_HEADER_AND_VERSION_HEADER)
                     .build();
             response = apacheClient.execute(getRequest);
@@ -101,6 +108,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             getRequest = RequestBuilder.get()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildGetSASTScanSettingURL(new URL(hostName), id)))
+                    .setHeader(authHeader)
                     .setHeader(CLI_ACCEPT_HEADER_AND_VERSION_HEADER)
                     .build();
             response = apacheClient.execute(getRequest);
@@ -122,6 +130,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             postRequest = RequestBuilder.post()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildSASTScanSettingURL(new URL(hostName))))
+                    .setHeader(authHeader)
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .setEntity(SastHttpEntityBuilder.createScanSettingEntity(scanSetting))
                     .build();
@@ -143,6 +152,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             putRequest = RequestBuilder.put()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildSASTScanSettingURL(new URL(hostName))))
+                    .setHeader(authHeader)
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .setEntity(SastHttpEntityBuilder.createScanSettingEntity(scanSetting))
                     .build();
@@ -164,6 +174,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             postRequest = RequestBuilder.post()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildCreateNewSastScanURL(new URL(hostName))))
+                    .setHeader(authHeader)
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .setEntity(SastHttpEntityBuilder.createNewSastScanEntity(projectId, forceScan, incrementalScan, visibleOthers))
                     .build();
@@ -187,6 +198,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             putRequest = RequestBuilder.put()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildSASTScanExclusionSettingURL(new URL(hostName), projectId)))
+                    .setHeader(authHeader)
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .setEntity(SastHttpEntityBuilder.createScanExclusionSettingEntity(StringUtils.join(excludeFoldersPattern, ","),
                             StringUtils.join(excludeFilesPattern, ",")))
@@ -209,6 +221,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             patchRequest = RequestBuilder.patch()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildGetSASTScanResourceURL(new URL(hostName), scanId)))
+                    .setHeader(authHeader)
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .setEntity(SastHttpEntityBuilder.patchSastCommentEntity(comment))
                     .build();
@@ -229,10 +242,13 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
 
         try {
             MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-            builder.addBinaryBody("zippedSource", zipFile, ContentType.APPLICATION_OCTET_STREAM, null);
+            builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+            builder.addBinaryBody("zippedSource", zipFile);
             HttpEntity multipart = builder.build();
             postRequest = RequestBuilder.post()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildUploadZipFileURL(new URL(hostName), projectId)))
+                    .setConfig(RequestConfig.custom().setConnectTimeout(30 * 1000).build())
+                    .setHeader(authHeader)
                     .setEntity(multipart)
                     .build();
             log.info("Uploading zipped source files to server, please wait.");
@@ -255,6 +271,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             getRequest = RequestBuilder.get()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildGetSASTScanQueueResponseURL(new URL(hostName), scanId)))
+                    .setHeader(authHeader)
                     .setHeader(CLI_ACCEPT_HEADER_AND_VERSION_HEADER)
                     .build();
             response = apacheClient.execute(getRequest);
@@ -276,6 +293,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             getRequest = RequestBuilder.get()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildGetSASTScanResultsURL(new URL(hostName), scanId)))
+                    .setHeader(authHeader)
                     .setHeader(CLI_ACCEPT_HEADER_AND_VERSION_HEADER)
                     .build();
             response = apacheClient.execute(getRequest);
@@ -308,6 +326,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
             } else {
                 postRequest = RequestBuilder.post()
                         .setUri(String.valueOf(SastResourceURIBuilder.buildCreateRemoteSourceScanURL(new URL(hostName), projectId, remoteSourceType, false)))
+                        .setHeader(authHeader)
                         .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                         .setEntity(SastHttpEntityBuilder.createRemoteSourceEntity(remoteSourceScanSettingDTO))
                         .build();
@@ -331,6 +350,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
             if (privateKey.length < 1) {
                 postRequest = RequestBuilder.post()
                         .setUri(String.valueOf(SastResourceURIBuilder.buildCreateRemoteSourceScanURL(new URL(hostName), projectId, RemoteSourceType.GIT, false)))
+                        .setHeader(authHeader)
                         .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                         .setEntity(SastHttpEntityBuilder.createGITSourceEntity(locationURL, locationBranch))
                         .build();
@@ -341,6 +361,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
                 builder.addBinaryBody("privateKey", privateKey, ContentType.MULTIPART_FORM_DATA, null);
                 postRequest = RequestBuilder.post()
                         .setUri(String.valueOf(SastResourceURIBuilder.buildCreateRemoteSourceScanURL(new URL(hostName), projectId, RemoteSourceType.GIT, true)))
+                        .setHeader(authHeader)
                         .setHeader(CLI_ACCEPT_HEADER_AND_VERSION_HEADER)
                         .setEntity(builder.build())
                         .build();
@@ -363,6 +384,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             postRequest = RequestBuilder.post()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildCreateReportURL(new URL(hostName))))
+                    .setHeader(authHeader)
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .setEntity(SastHttpEntityBuilder.createReportEntity(scanId, reportType))
                     .build();
@@ -386,6 +408,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             getRequest = RequestBuilder.get()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildGetReportStatusURL(new URL(hostName), reportId)))
+                    .setHeader(authHeader)
                     .setHeader(CLI_ACCEPT_HEADER_AND_VERSION_HEADER)
                     .build();
             response = apacheClient.execute(getRequest);
@@ -408,6 +431,7 @@ public class CxRestSASTClientImpl<T extends RemoteSourceScanSettingDTO> implemen
         try {
             getRequest = RequestBuilder.get()
                     .setUri(String.valueOf(SastResourceURIBuilder.buildGetReportFileURL(new URL(hostName), reportId)))
+                    .setHeader(authHeader)
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .build();
             response = apacheClient.execute(getRequest);

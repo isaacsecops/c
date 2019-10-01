@@ -33,13 +33,17 @@ public class CxRestGeneralClientImpl implements CxRestGeneralClient {
 
     private static final int UNASSIGNED_VALUE = 0;
 
-    private HttpClient apacheClient;
-    private String hostName;
     private static final Header CLI_CONTENT_TYPE_AND_VERSION_HEADER = new BasicHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType() + ";v=1.0");
     private static final Header CLI_ACCEPT_AND_VERSION_HEADER = new BasicHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.getMimeType() + ";v=1.0");
 
+    private static Header authHeader;
+
+    private HttpClient apacheClient;
+    private String hostName;
+
 
     public CxRestGeneralClientImpl(CxRestLoginClient restClient) {
+        authHeader = restClient.getAuthHeader();
         this.apacheClient = restClient.getClient();
         this.hostName = restClient.getHostName();
     }
@@ -50,8 +54,10 @@ public class CxRestGeneralClientImpl implements CxRestGeneralClient {
         HttpUriRequest getRequest;
 
         try {
+            URL url = GeneralResourceURIBuilder.buildGetTeamsURL(new URL(hostName));
             getRequest = RequestBuilder.get()
-                    .setUri(String.valueOf(GeneralResourceURIBuilder.buildGetTeamsURL(new URL(hostName))))
+                    .setUri(String.valueOf(url))
+                    .setHeader(authHeader)
                     .setHeader(CLI_ACCEPT_AND_VERSION_HEADER)
                     .build();
             response = apacheClient.execute(getRequest);
@@ -73,6 +79,7 @@ public class CxRestGeneralClientImpl implements CxRestGeneralClient {
         try {
             getRequest = RequestBuilder.get()
                     .setUri(String.valueOf(GeneralResourceURIBuilder.buildProjectsURL(new URL(hostName))))
+                    .setHeader(authHeader)
                     .setHeader(CLI_ACCEPT_AND_VERSION_HEADER)
                     .build();
             response = apacheClient.execute(getRequest);
@@ -95,6 +102,7 @@ public class CxRestGeneralClientImpl implements CxRestGeneralClient {
             postRequest = RequestBuilder.post()
                     .setUri(String.valueOf(GeneralResourceURIBuilder.buildProjectsURL(new URL(hostName))))
                     .setEntity(GeneralHttpEntityBuilder.createProjectEntity(projectToCreate))
+                    .setHeader(authHeader)
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .build();
 

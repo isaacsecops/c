@@ -1,6 +1,7 @@
 package com.checkmarx.cxconsole.clients.login;
 
 import com.checkmarx.cxconsole.clients.login.exceptions.CxRestLoginClientException;
+import org.apache.http.Header;
 import org.apache.http.client.HttpClient;
 
 /**
@@ -23,5 +24,7 @@ public interface CxRestLoginClient {
     boolean isCredentialsLogin();
 
     boolean isTokenLogin();
+
+    Header getAuthHeader();
 
 }
