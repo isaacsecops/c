@@ -19,9 +19,9 @@ repositories {
 
 group = 'com.checkmarx'
 //For development purpose
-//version = '9.00.2' + "-" + getDate()
+//version = '9.00.3' + "-" + getDate()
 //For release purpose
-version = '9.00.2'
+version = '9.00.3'
 compileJava.options.encoding = 'UTF-8'
 compileJava.sourceCompatibility = 8
 compileJava.targetCompatibility = 8
@@ -65,6 +65,12 @@ dependencies {
             'org.apache.httpcomponents:httpclient:4.5.5',
             'org.apache.httpcomponents:httpmime:4.5.5',
             'org.apache.httpcomponents:httpclient-win:4.5.5',
+            'org.apache.cxf:cxf-rt-frontend-jaxws:3.2.8',
+            'org.apache.cxf:cxf-rt-transports-http-jetty:3.2.8',
+            'org.apache.httpcomponents:httpclient:4.5.10',
+            'org.apache.httpcomponents:httpmime:4.5.10',
+            'org.apache.httpcomponents:httpclient-win:4.5.10',
+            'org.glassfish.jersey.core:jersey-common:2.29.1',
             'javax.ws.rs:javax.ws.rs-api:2.1',
             'org.apache.ant:ant:1.10.1',
             'net.lingala.zip4j:zip4j:2.1.2',
@@ -76,7 +82,7 @@ dependencies {
             'org.bouncycastle:bcprov-jdk15on:1.62',
             'com.google.guava:guava:24.1.1-jre',
             'org.codehaus.plexus:plexus-archiver:3.6.0'
-    compile('com.checkmarx:cx-ws-fs-agent:18.7.2.1') {
+    compile('com.checkmarx:cx-ws-fs-agent:18.7.2.3') {
         exclude group: 'io.vertx:vertx-core'
         exclude group: 'io.vertx:vertx-web'
         exclude group: 'org.bouncycastle:bcprov-jdk15on'
@@ -85,8 +91,6 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-log4j12'
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-databind'
-        exclude group: 'org.codehaus.plexus', module: 'plexus-archiver'
-        exclude group: 'org.codehaus.plexus', module: 'plexus-archiver'
         exclude group: 'org.codehaus.plexus', module: 'plexus-archiver'
         exclude group: 'org.apache.commons', module: 'commons-compress'
         exclude group: 'com.github.junrar', module: 'junrar'
@@ -105,13 +109,13 @@ distributions {
                 filter(FixCrLfFilter.class,
                         eol: FixCrLfFilter.CrLf.newInstance("lf"))
             }
-            from('src/main/scripts/V870') {
+            from('src/main/scripts/V900') {
                 filter {
                     it.replaceAll('cx_console\\.jar', jar.archiveName)
                 }
                 filter(FixCrLfFilter.class,
                         eol: FixCrLfFilter.CrLf.newInstance("lf"))
-                into 'Examples\\V870'
+                into 'Examples\\V900'
             }
             from('src/main') {
                 include 'config/krb5.conf'

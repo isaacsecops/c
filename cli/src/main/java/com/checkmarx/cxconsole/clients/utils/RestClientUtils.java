@@ -16,6 +16,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.log4j.Logger;
+import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -24,7 +25,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.checkmarx.cxconsole.exitcodes.Constants.ExitCodes.POLICY_VIOLATION_ERROR_EXIT_CODE;
 import static com.checkmarx.cxconsole.exitcodes.Constants.ExitCodes.SCAN_SUCCEEDED_EXIT_CODE;
@@ -32,32 +32,42 @@ import static com.checkmarx.cxconsole.exitcodes.Constants.ExitCodes.SCAN_SUCCEED
 /**
  * Created by nirli on 20/02/2018.
  */
-public interface RestClientUtils {
+public class RestClientUtils {
 
-    String SEPARATOR = ",";
-    Logger log = Logger.getLogger(RestClientUtils.class);
+    private static Logger log = Logger.getLogger(RestClientUtils.class);
 
-    static JSONObject parseJsonObjectFromResponse(HttpResponse response) throws IOException {
+    private static final String SEPARATOR = ",";
+
+    private static String HTTP_HOST = System.getProperty("http.proxyHost");
+    private static String HTTP_PORT = System.getProperty("http.proxyPort");
+    private static String HTTP_USERNAME = System.getProperty("http.proxyUser");
+    private static String HTTP_PASSWORD = System.getProperty("http.proxyPassword");
+
+    private static String HTTPS_HOST = System.getProperty("https.proxyHost");
+    private static String HTTPS_PORT = System.getProperty("https.proxyPort");
+    private static String HTTPS_USERNAME = System.getProperty("https.proxyUser");
+    private static String HTTPS_PASSWORD = System.getProperty("https.proxyPassword");
+
+    private RestClientUtils() {
+        throw new IllegalStateException("Utility class");
+    }
+
+    public static JSONObject parseJsonObjectFromResponse(HttpResponse response) throws IOException {
         String responseInString = createStringFromResponse(response).toString();
         return new JSONObject(responseInString);
     }
 
-    static <ResponseObj> ResponseObj parseJsonFromResponse(HttpResponse response, Class<ResponseObj> dtoClass) throws IOException {
+    public static <ResponseObj> ResponseObj parseJsonFromResponse(HttpResponse response, Class<ResponseObj> dtoClass) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         return mapper.readValue(createStringFromResponse(response).toString(), dtoClass);
     }
 
-    static <ResponseObj> ResponseObj parseFromURL(String url, Class<ResponseObj> dtoClass) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(fromUrlToJson(url), dtoClass);
-    }
-
-    static <ResponseObj> List<ResponseObj> parseJsonListFromResponse(HttpResponse response, CollectionType dtoClass) throws IOException {
+    public static <ResponseObj> List<ResponseObj> parseJsonListFromResponse(HttpResponse response, CollectionType dtoClass) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         return mapper.readValue(createStringFromResponse(response).toString(), dtoClass);
     }
 
-    static StringBuilder createStringFromResponse(HttpResponse response) throws IOException {
+    private static StringBuilder createStringFromResponse(HttpResponse response) throws IOException {
         BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
 
         StringBuilder result = new StringBuilder();
@@ -69,7 +79,7 @@ public interface RestClientUtils {
         return result;
     }
 
-    static ScanSettingDTO parseScanSettingResponse(HttpResponse response) throws IOException {
+    public static ScanSettingDTO parseScanSettingResponse(HttpResponse response) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         SimpleModule module = new SimpleModule();
         module.addDeserializer(ScanSettingDTO.class, new ScanSettingDTODeserializer());
@@ -78,7 +88,8 @@ public interface RestClientUtils {
         return mapper.readValue(createStringFromResponse(response).toString(), ScanSettingDTO.class);
     }
 
-    static void validateClientResponse(HttpResponse response, int status, String message) throws CxValidateResponseException {
+
+    public static void validateClientResponse(HttpResponse response, int status, String message) throws CxValidateResponseException {
         try {
             if (response.getStatusLine().getStatusCode() != status) {
                 String responseBody = IOUtils.toString(response.getEntity().getContent(), Charset.defaultCharset());
@@ -92,7 +103,7 @@ public interface RestClientUtils {
         }
     }
 
-    static void validateTokenResponse(HttpResponse response, int status, String message) throws CxValidateResponseException {
+    public static void validateTokenResponse(HttpResponse response, int status, String message) throws CxValidateResponseException {
         try {
             if (response.getStatusLine().getStatusCode() != status) {
                 String responseBody = IOUtils.toString(response.getEntity().getContent(), Charset.defaultCharset());
@@ -110,14 +121,110 @@ public interface RestClientUtils {
         }
     }
 
+    public static void setClientProxy(HttpClientBuilder clientBuilder, String proxyHost, int proxyPort) {
+        log.debug(String.format("Setting proxy to %s:%s", proxyHost, proxyPort));
+        HttpHost proxyObject = new HttpHost(proxyHost, proxyPort);
+        clientBuilder
+                .setProxy(proxyObject)
+                .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
+    }
+
+    public static void setProxy(HttpClientBuilder cb) {
+        try {
+            HttpHost proxy;
+            if (!StringUtils.isEmpty(HTTPS_HOST) && !StringUtils.isEmpty(HTTPS_PORT)) {
+                proxy = new HttpHost(HTTPS_HOST, Integer.parseInt(HTTPS_PORT), "https");
+                cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxy));
+                if (!StringUtils.isEmpty(HTTPS_USERNAME) && !StringUtils.isEmpty(HTTPS_PASSWORD)) {
+                    RestClientUtils.setClientProxy(cb, HTTPS_HOST, Integer.parseInt(HTTPS_PORT), HTTPS_USERNAME, HTTPS_PASSWORD, "https");
+                } else {
+                    RestClientUtils.setClientProxy(cb, HTTPS_HOST, Integer.parseInt(HTTPS_PORT));
+                }
+            } else if (!StringUtils.isEmpty(HTTP_HOST) && !StringUtils.isEmpty(HTTP_PORT)) {
+                proxy = new HttpHost(HTTP_HOST, Integer.parseInt(HTTP_PORT), "http");
+                cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxy));
+                if (!StringUtils.isEmpty(HTTP_USERNAME) && !StringUtils.isEmpty(HTTP_PASSWORD)) {
+                    RestClientUtils.setClientProxy(cb, HTTP_HOST, Integer.parseInt(HTTP_PORT), HTTP_USERNAME, HTTP_PASSWORD, "http");
+                } else {
+                    RestClientUtils.setClientProxy(cb, HTTP_HOST, Integer.parseInt(HTTP_PORT));
+                }
+            } else {
+                log.warn("No proxy was set: missing params.");
+            }
+        } catch (CxRestClientException ex) {
+            log.error("[CX-CLI] Fail to set proxy", ex);
+        }
+    }
+
+    public static void setClientProxy(HttpClientBuilder clientBuilder, String proxyHost, int proxyPort, String proxyUser, String proxyPassword, String scheme) throws CxRestClientException {
+        log.debug(String.format("Setting proxy with credentials to %s:%s", proxyHost, proxyPort));
+        HttpHost proxy = new HttpHost(proxyHost, proxyPort, scheme);
+        CredentialsProvider credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(new AuthScope(proxyHost, proxyPort), new UsernamePasswordCredentials(proxyUser, proxyPassword));
+
+        clientBuilder
+                .setProxy(proxy)
+                .setDefaultCredentialsProvider(credsProvider)
+                .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy())
+                .setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build())
+                .setSSLSocketFactory(getSSLSF())
+                .setConnectionManager(getHttpConnManager())
+                .setDefaultRequestConfig(genRequestConfig())
+                .setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
+    }
+
+    public static RequestConfig genRequestConfig() {
+        RequestConfig.Builder rcb = RequestConfig.custom();
+        rcb.setConnectTimeout(60 * 1000);
+        rcb.setSocketTimeout(60 * 1000);
+
+        if (!StringUtils.isEmpty(HTTPS_HOST) && !StringUtils.isEmpty(HTTPS_PORT)) {
+            rcb.setProxy(new HttpHost(HTTPS_HOST, Integer.parseInt(HTTPS_PORT), "https"));
+            return rcb.build();
+        } else if (!StringUtils.isEmpty(HTTP_HOST) && !StringUtils.isEmpty(HTTP_PORT)) {
+            rcb.setProxy(new HttpHost(HTTP_HOST, Integer.parseInt(HTTP_PORT), "http"));
+            return rcb.build();
+        }
+
+        return rcb.build();
+    }
+
+    public static SSLConnectionSocketFactory getSSLSF() throws CxRestClientException {
+        TrustStrategy acceptingTrustStrategy = new TrustAllStrategy();
+        SSLContext sslContext;
+        try {
+            sslContext = SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
+        } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
+            throw new CxRestClientException("Fail to set trust all certificate, 'SSLConnectionSocketFactory'", e);
+        }
+        return new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
+    }
+
+    public static HttpClientConnectionManager getHttpConnManager() throws CxRestClientException {
+        Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
+                .register("https", getSSLSF())
+                .register("http", new PlainConnectionSocketFactory())
+                .build();
+
+        return new BasicHttpClientConnectionManager(socketFactoryRegistry);
+    }
+
+    public static Registry<AuthSchemeProvider> getAuthSchemeProviderRegistry() {
+        return RegistryBuilder.<AuthSchemeProvider>create()
+                .register(AuthSchemes.BASIC, new BasicSchemeFactory())
+                .register(AuthSchemes.DIGEST, new DigestSchemeFactory())
+                .build();
+    }
+
     //Common method to be called by SAST or OSA commands.
-    static int getArmViolationExitCode(CxRestArmClient armClient, CxProviders provider, int projectId, Logger log) throws CxRestARMClientException {
+    public static int getArmViolationExitCode(CxRestArmClient armClient, CxProviders provider, int projectId, Logger log) throws CxRestARMClientException {
         List<String> violatedPolicies = new ArrayList<>();
         int exitCode = SCAN_SUCCEEDED_EXIT_CODE;
-//        String status = armClient.getPolicyStatus(projectId);
         List<Policy> policiesViolations = armClient.getProjectViolations(projectId, provider.name());
-        violatedPolicies.addAll(policiesViolations.stream().map(Policy::getPolicyName).collect(Collectors.toList()));
-        if (violatedPolicies.size() > 0) {
+        for (Policy policy: policiesViolations) {
+                violatedPolicies.add(policy.getPolicyName());
+        }
+        if(violatedPolicies.size() > 0){
             exitCode = POLICY_VIOLATION_ERROR_EXIT_CODE;
             StringBuilder builder = new StringBuilder();
             for (String policy : violatedPolicies) {
@@ -128,24 +235,11 @@ public interface RestClientUtils {
             //Remove last comma
             commaSeparatedPolicies = commaSeparatedPolicies.substring(0, commaSeparatedPolicies.length() - SEPARATOR.length());
             log.info("Policy status: Violated");
-            log.info("Policy violations: " + violatedPolicies.size() + " - " + commaSeparatedPolicies);
-        } else {
+            log.info("Policy violations: " + violatedPolicies.size() + " - " + commaSeperatedPolicies);
+
+        } else{
             log.info("Policy Status: Compliant");
         }
         return exitCode;
-    }
-
-    static void setClientProxy(HttpClientBuilder clientBuilder, String proxyHost, int proxyPort) {
-        log.debug(String.format("Setting proxy to %s:%s", proxyHost, proxyPort));
-        HttpHost proxyObject = new HttpHost(proxyHost, proxyPort);
-        clientBuilder
-                .setProxy(proxyObject)
-                .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
-    }
-
-    static String fromUrlToJson(String url) {
-        url = url.replaceAll("=", "\":\"");
-        url = url.replaceAll("&", "\",\"");
-        return "{\"" + url + "\"}";
     }
 }

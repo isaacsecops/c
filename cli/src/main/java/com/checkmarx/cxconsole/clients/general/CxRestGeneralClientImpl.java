@@ -7,7 +7,6 @@ import com.checkmarx.cxconsole.clients.general.exception.CxRestGeneralClientExce
 import com.checkmarx.cxconsole.clients.general.utils.GeneralHttpEntityBuilder;
 import com.checkmarx.cxconsole.clients.general.utils.GeneralResourceURIBuilder;
 import com.checkmarx.cxconsole.clients.login.CxRestLoginClient;
-import com.checkmarx.cxconsole.clients.sast.utils.SastResourceURIBuilder;
 import com.checkmarx.cxconsole.clients.utils.RestClientUtils;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.apache.http.Header;
@@ -34,14 +33,17 @@ public class CxRestGeneralClientImpl implements CxRestGeneralClient {
 
     private static final int UNASSIGNED_VALUE = 0;
 
-    private HttpClient client;
+    private HttpClient apacheClient;
     private String hostName;
     private static final Header CLI_CONTENT_TYPE_AND_VERSION_HEADER = new BasicHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType() + ";v=1.0");
     private static final Header CLI_ACCEPT_AND_VERSION_HEADER = new BasicHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.getMimeType() + ";v=1.0");
 
+    private static Header authHeader;
+
 
     public CxRestGeneralClientImpl(CxRestLoginClient restClient) {
-        this.client = restClient.getClient();
+        authHeader = restClient.getAuthHeader();
+        this.apacheClient = restClient.getClient();
         this.hostName = restClient.getHostName();
     }
 
@@ -51,11 +53,13 @@ public class CxRestGeneralClientImpl implements CxRestGeneralClient {
         HttpUriRequest getRequest;
 
         try {
+            URL url = GeneralResourceURIBuilder.buildGetTeamsURL(new URL(hostName));
             getRequest = RequestBuilder.get()
-                    .setUri(String.valueOf(GeneralResourceURIBuilder.buildGetTeamsURL(new URL(hostName))))
+                    .setUri(String.valueOf(url))
+                    .setHeader(authHeader)
                     .setHeader(CLI_ACCEPT_AND_VERSION_HEADER)
                     .build();
-            response = client.execute(getRequest);
+            response = apacheClient.execute(getRequest);
 
             RestClientUtils.validateClientResponse(response, 200, "Failed to get teams");
             return parseJsonListFromResponse(response, TypeFactory.defaultInstance().constructCollectionType(List.class, TeamDTO.class));
@@ -74,9 +78,10 @@ public class CxRestGeneralClientImpl implements CxRestGeneralClient {
         try {
             getRequest = RequestBuilder.get()
                     .setUri(String.valueOf(GeneralResourceURIBuilder.buildProjectsURL(new URL(hostName))))
+                    .setHeader(authHeader)
                     .setHeader(CLI_ACCEPT_AND_VERSION_HEADER)
                     .build();
-            response = client.execute(getRequest);
+            response = apacheClient.execute(getRequest);
 
             RestClientUtils.validateClientResponse(response, 200, "Failed to get projects");
             return parseJsonListFromResponse(response, TypeFactory.defaultInstance().constructCollectionType(List.class, ProjectDTO.class));
@@ -97,10 +102,11 @@ public class CxRestGeneralClientImpl implements CxRestGeneralClient {
             postRequest = RequestBuilder.post()
                     .setUri(String.valueOf(GeneralResourceURIBuilder.buildProjectsURL(new URL(hostName))))
                     .setEntity(GeneralHttpEntityBuilder.createProjectEntity(projectToCreate))
+                    .setHeader(authHeader)
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .build();
 
-            response = client.execute(postRequest);
+            response = apacheClient.execute(postRequest);
             RestClientUtils.validateClientResponse(response, 201, "Failed to create new project");
 
             JSONObject jsonResponse = RestClientUtils.parseJsonObjectFromResponse(response);
@@ -120,7 +126,7 @@ public class CxRestGeneralClientImpl implements CxRestGeneralClient {
 
     @Override
     public boolean isLoggedIn() {
-        return (client != null);
+        return (apacheClient != null);
     }
 
     @Override
@@ -134,7 +140,7 @@ public class CxRestGeneralClientImpl implements CxRestGeneralClient {
                     .setUri(GeneralResourceURIBuilder.buildGetCxVersion(new URL(hostName)).toString())
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .build();
-            response = client.execute(request);
+            response = apacheClient.execute(request);
             RestClientUtils.validateClientResponse(response, 200, "API not found");
             version = RestClientUtils.parseJsonObjectFromResponse(response).getString("version");
         } catch (IOException | CxValidateResponseException e) {

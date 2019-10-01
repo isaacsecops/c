@@ -9,14 +9,12 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.apache.http.Header;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.entity.ContentType;
 import org.apache.http.message.BasicHeader;
-import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -43,7 +41,10 @@ public class CxRestArmClientImpl implements CxRestArmClient {
     private static final String SAST_GET_CXARM_STATUS = "sast/projects/{projectId}/publisher/policyFindings/status";
     private static final String ARM_GET_VIOLATIONS_RESOURCE = "projects/{projectId}/violations?provider={provider}";
 
+    private static Header authHeader;
+
     public CxRestArmClientImpl(CxRestLoginClient restClient, String hostName) {
+        authHeader = restClient.getAuthHeader();
         this.apacheClient = restClient.getClient();
         this.hostName = hostName;
     }
@@ -52,16 +53,16 @@ public class CxRestArmClientImpl implements CxRestArmClient {
     public List<Policy> getProjectViolations(int projectId, String provider) throws CxRestARMClientException {
         HttpUriRequest getRequest;
         HttpResponse response = null;
+
         try {
             getRequest = RequestBuilder.get()
                     .setUri(String.valueOf(generateGetViolationsURI(projectId, provider)))
+                    .setHeader(authHeader)
                     .setHeader(CLI_ACCEPT_HEADER_AND_VERSION_HEADER)
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .build();
             response = apacheClient.execute(getRequest);
-            if (response.getStatusLine().getStatusCode() != 200) {
-                throw new CxValidateResponseException("Failed retrieving project violations");
-            }
+            RestClientUtils.validateClientResponse(response, 200, "fail to get CXArm violations");
             return parseJsonListFromResponse(response, TypeFactory.defaultInstance().constructCollectionType(List.class, Policy.class));
         } catch (IOException | CxValidateResponseException e) {
             log.error("Failed to get CXArm violations: " + e.getMessage());
@@ -70,29 +71,6 @@ public class CxRestArmClientImpl implements CxRestArmClient {
             HttpClientUtils.closeQuietly(response);
         }
     }
-
-//    @Override
-//    public String getPolicyStatus(int projectId) {
-//        HttpUriRequest request;
-//        HttpResponse response;
-//        String ret = "";
-//        try {
-//            request = RequestBuilder.get()
-//                    .setUri(String.valueOf(generateGetPolicyStatusURI(projectId)))
-//                    .setHeader(CLI_ACCEPT_HEADER_AND_VERSION_HEADER)
-//                    .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
-//                    .build();
-//            response = apacheClient.execute(request);
-//            if (response.getStatusLine().getStatusCode() != 200) {
-//                throw new CxValidateResponseException("Failed retrieving policy status");
-//            }
-//
-//            ret = EntityUtils.toString(response.getEntity());
-//        } catch (IOException | CxValidateResponseException e) {
-//            e.printStackTrace();
-//        }
-//        return ret;
-//    }
 
     @Override
     public void close() {

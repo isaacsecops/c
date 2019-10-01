@@ -7,29 +7,19 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.log4j.Logger;
 
 /**
  * Created by nirli on 01/03/2018.
  */
 public class CommandUtils {
 
-    private CommandUtils() {
-    }
+    private static Logger log = Logger.getLogger(CommandUtils.class);
 
     private static final String CX_SWAGGER = "/cxrestapi/help/swagger";
-
     private static final boolean IS_PROXY = Boolean.parseBoolean(System.getProperty("proxySet"));
-    private static final String PROXY_HOST;
-    private static final String PROXY_PORT;
 
-    static {
-        PROXY_PORT = System.getProperty("http.proxyPort") == null
-                ? System.getProperty("https.proxyPort")
-                : System.getProperty("http.proxyPort");
-
-        PROXY_HOST = System.getProperty("http.proxyHost") == null
-                ? System.getProperty("https.proxyHost")
-                : System.getProperty("http.proxyHost");
+    private CommandUtils() {
     }
 
     public static String resolveServerProtocol(String originalHost) throws CxRestClientException {
@@ -58,12 +48,13 @@ public class CommandUtils {
         try {
             final HttpClientBuilder clientBuilder = HttpClientBuilder.create();
             if (IS_PROXY) {
-                RestClientUtils.setClientProxy(clientBuilder, PROXY_HOST, Integer.parseInt(PROXY_PORT));
+                RestClientUtils.setProxy(clientBuilder);
             }
             client = clientBuilder.build();
             HttpGet getMethod = new HttpGet(url);
             HttpResponse response = client.execute(getMethod);
             responseCode = response.getStatusLine().getStatusCode();
+            log.info("Trying to reach Checkmarx server, response code: " + responseCode);
         } catch (Exception e) {
             return false;
         } finally {
