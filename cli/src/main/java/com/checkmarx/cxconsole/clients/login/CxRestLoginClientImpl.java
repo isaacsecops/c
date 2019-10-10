@@ -30,7 +30,6 @@ import org.apache.http.impl.auth.win.WindowsNTLMSchemeFactory;
 import org.apache.http.impl.auth.win.WindowsNegotiateSchemeFactory;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.SystemDefaultCredentialsProvider;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
@@ -80,7 +79,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
 
         headers.add(CLI_ORIGIN_HEADER);
 
-        final HttpClientBuilder clientBuilder = HttpClients.custom();
+        final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
         if (IS_PROXY) {
             RestClientUtils.setProxy(clientBuilder);
         }
@@ -110,7 +109,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
 
         headers.add(CLI_ORIGIN_HEADER);
 
-        final HttpClientBuilder clientBuilder = HttpClients.custom();
+        final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
         if (IS_PROXY) {
             RestClientUtils.setProxy(clientBuilder);
         }
@@ -136,7 +135,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
                 .build();
         final CredentialsProvider credsProvider = new WindowsCredentialsProvider(new SystemDefaultCredentialsProvider());
 
-        final HttpClientBuilder clientBuilder = HttpClients.custom();
+        final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
         if (IS_PROXY) {
             RestClientUtils.setProxy(clientBuilder);
         }
@@ -167,7 +166,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
 
             authHeader = new BasicHeader("Authorization", "Bearer " + jsonResponse.getAccessToken());
             headers.add(authHeader);
-            final HttpClientBuilder clientBuilder = HttpClients.custom();
+            final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
             if (IS_PROXY) {
                 RestClientUtils.setProxy(clientBuilder);
             }
@@ -187,7 +186,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
     @Override
     public void tokenLogin() throws CxRestLoginClientException {
         if (headers.size() == 2) {
-            final HttpClientBuilder clientBuilder = HttpClients.custom();
+            final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
             if (IS_PROXY) {
                 RestClientUtils.setProxy(clientBuilder);
             }
@@ -233,7 +232,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         headers.add(new BasicHeader(CSRF_TOKEN_HEADER, csrfToken));
         headers.add(new BasicHeader("cookie", String.format("CXCSRFToken=%s; cxCookie=%s", csrfToken, cxCookie)));
 
-        final HttpClientBuilder clientBuilder = HttpClients.custom();
+        final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
         if (IS_PROXY) {
             RestClientUtils.setProxy(clientBuilder);
         }

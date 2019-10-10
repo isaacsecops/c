@@ -34,6 +34,7 @@ import org.apache.http.impl.auth.BasicSchemeFactory;
 import org.apache.http.impl.auth.DigestSchemeFactory;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
@@ -145,12 +146,22 @@ public class RestClientUtils {
         }
     }
 
-    public static void setClientProxy(HttpClientBuilder clientBuilder, String proxyHost, int proxyPort) {
+    public static HttpClientBuilder genHttpClientBuilder() {
+        try {
+            return HttpClients.custom().setSSLSocketFactory(getSSLSF());
+        } catch (CxRestClientException e) {
+            log.error("[CX-CLI] Fail to set SSL context", e);
+        }
+        return HttpClients.custom();
+    }
+
+    public static void setClientProxy(HttpClientBuilder clientBuilder, String proxyHost, int proxyPort) throws CxRestClientException {
         log.debug(String.format("Setting proxy to %s:%s", proxyHost, proxyPort));
         HttpHost proxyObject = new HttpHost(proxyHost, proxyPort);
         clientBuilder
                 .setProxy(proxyObject)
-                .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
+                .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy())
+                .setSSLSocketFactory(getSSLSF());
     }
 
     public static void setProxy(HttpClientBuilder cb) {
@@ -191,7 +202,6 @@ public class RestClientUtils {
                 .setDefaultCredentialsProvider(credsProvider)
                 .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy())
                 .setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build())
-                .setSSLSocketFactory(getSSLSF())
                 .setConnectionManager(getHttpConnManager())
                 .setDefaultRequestConfig(genRequestConfig())
                 .setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());

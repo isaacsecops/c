@@ -46,7 +46,7 @@ public class CommandUtils {
         int responseCode;
         HttpClient client = null;
         try {
-            final HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+            final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
             if (IS_PROXY) {
                 RestClientUtils.setProxy(clientBuilder);
             }

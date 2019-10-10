@@ -5,13 +5,13 @@ import com.checkmarx.cxconsole.clients.login.dto.RestGenerateTokenDTO;
 import com.checkmarx.cxconsole.clients.login.exceptions.CxRestLoginClientException;
 import com.checkmarx.cxconsole.clients.token.utils.TokenHttpEntityBuilder;
 import com.checkmarx.cxconsole.clients.token.utils.TokenResourceURIBuilder;
+import com.checkmarx.cxconsole.clients.utils.RestClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.entity.ContentType;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.HTTP;
 
 import java.io.IOException;
@@ -22,7 +22,7 @@ import static com.checkmarx.cxconsole.clients.utils.RestClientUtils.validateToke
 
 public class CxRestTokenClientImpl implements CxRestTokenClient {
 
-    private HttpClient client = HttpClientBuilder.create().build();
+    private HttpClient client = RestClientUtils.genHttpClientBuilder().build();
 
     private static final String PARSING_ERROR = "Failed due to parsing error: ";
     private static final String FAIL_TO_VALIDATE_TOKEN_RESPONSE_ERROR = " User authentication failed";
