@@ -41,7 +41,7 @@ public class CxConsoleLauncher {
      */
     public static void main(String[] args) {
         int exitCode;
-        DOMConfigurator.configure("C:\\cxdev\\Plugins\\CLI\\cli\\src\\main\\resources\\log4j.xml");
+        DOMConfigurator.configure("./log4j.xml");
 
         exitCode = runCli(args);
         if (exitCode == SCAN_SUCCEEDED_EXIT_CODE) {
