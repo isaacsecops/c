@@ -5,6 +5,7 @@ import com.checkmarx.cxconsole.clients.login.dto.RestGenerateTokenDTO;
 import com.checkmarx.cxconsole.clients.login.exceptions.CxRestLoginClientException;
 import com.checkmarx.cxconsole.clients.token.utils.TokenHttpEntityBuilder;
 import com.checkmarx.cxconsole.clients.token.utils.TokenResourceURIBuilder;
+import com.checkmarx.cxconsole.clients.utils.RestClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -22,7 +23,15 @@ import static com.checkmarx.cxconsole.clients.utils.RestClientUtils.validateToke
 
 public class CxRestTokenClientImpl implements CxRestTokenClient {
 
-    private HttpClient client = HttpClientBuilder.create().build();
+    private static HttpClient client;
+
+    static {
+        try {
+            client = HttpClientBuilder.create().setSSLSocketFactory(RestClientUtils.getSSLSF()).build();
+        } catch (CxRestClientException e) {
+            e.printStackTrace();
+        }
+    }
 
     private static final String PARSING_ERROR = "Failed due to parsing error: ";
     private static final String FAIL_TO_VALIDATE_TOKEN_RESPONSE_ERROR = " User authentication failed";

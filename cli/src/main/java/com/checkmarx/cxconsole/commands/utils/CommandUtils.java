@@ -57,6 +57,7 @@ public class CommandUtils {
         HttpClient client = null;
         try {
             final HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+            clientBuilder.setSSLSocketFactory(RestClientUtils.getSSLSF());
             if (IS_PROXY) {
                 RestClientUtils.setClientProxy(clientBuilder, PROXY_HOST, Integer.parseInt(PROXY_PORT));
             }

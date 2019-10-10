@@ -81,7 +81,7 @@ public abstract class CLICommand {
         printCommandsDebug();
         try {
             return executeCommand();
-        } catch (CLICommandException e) {
+        } catch (CLICommandException | CxRestClientException e) {
             return errorCodeResolver(e.getMessage());
         } finally {
             executor.shutdown();
@@ -92,7 +92,7 @@ public abstract class CLICommand {
      * Command specific operations. Should be implemented by every
      * complete executable command.
      */
-    protected abstract int executeCommand() throws CLICommandException;
+    protected abstract int executeCommand() throws CLICommandException, CxRestClientException;
 
     public abstract void checkParameters() throws CLICommandParameterValidatorException;
 

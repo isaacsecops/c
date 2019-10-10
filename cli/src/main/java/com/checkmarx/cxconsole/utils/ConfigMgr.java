@@ -1,5 +1,6 @@
 package com.checkmarx.cxconsole.utils;
 
+import com.checkmarx.cxconsole.clients.exception.CxRestClientException;
 import com.checkmarx.cxconsole.clients.login.CxRestLoginClient;
 import com.checkmarx.cxconsole.clients.login.CxRestLoginClientImpl;
 import com.checkmarx.cxconsole.parameters.CLIScanParametersSingleton;
@@ -168,7 +169,7 @@ public class ConfigMgr {
         mgr = new ConfigMgr(defConfig);
     }
 
-    public static CxRestLoginClient getRestWSMgr(CLIScanParametersSingleton parameters) {
+    public static CxRestLoginClient getRestWSMgr(CLIScanParametersSingleton parameters) throws CxRestClientException {
         if (cxRestLoginClient == null) {
             if (parameters.getCliMandatoryParameters().isHasUserParam() && parameters.getCliMandatoryParameters().isHasPasswordParam()) {
                 cxRestLoginClient = new CxRestLoginClientImpl(parameters.getCliMandatoryParameters().getOriginalHost(), parameters.getCliMandatoryParameters().getUsername(), parameters.getCliMandatoryParameters().getPassword());

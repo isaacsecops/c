@@ -1,5 +1,6 @@
 package com.checkmarx.cxconsole.clients.login;
 
+import com.checkmarx.cxconsole.clients.exception.CxRestClientException;
 import com.checkmarx.cxconsole.clients.exception.CxValidateResponseException;
 import com.checkmarx.cxconsole.clients.login.dto.RestGetAccessTokenDTO;
 import com.checkmarx.cxconsole.clients.login.exceptions.CxRestLoginClientException;
@@ -28,7 +29,9 @@ import org.apache.http.impl.auth.DigestSchemeFactory;
 import org.apache.http.impl.auth.win.WindowsCredentialsProvider;
 import org.apache.http.impl.auth.win.WindowsNTLMSchemeFactory;
 import org.apache.http.impl.auth.win.WindowsNegotiateSchemeFactory;
-import org.apache.http.impl.client.*;
+import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.SystemDefaultCredentialsProvider;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
 import org.apache.log4j.Logger;
@@ -80,13 +83,14 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
                 : System.getProperty("http.proxyHost");
     }
 
-    public CxRestLoginClientImpl(String hostname, String token) {
+    public CxRestLoginClientImpl(String hostname, String token) throws CxRestClientException {
         this.hostName = hostname;
         this.token = token;
         this.username = null;
         this.password = null;
 
         final HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+        clientBuilder.setSSLSocketFactory(RestClientUtils.getSSLSF());
         if (IS_PROXY) {
             RestClientUtils.setClientProxy(clientBuilder, PROXY_HOST, Integer.parseInt(PROXY_PORT));
         }
@@ -109,13 +113,14 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         }
     }
 
-    public CxRestLoginClientImpl(String hostname, String username, String password) {
+    public CxRestLoginClientImpl(String hostname, String username, String password) throws CxRestClientException {
         this.hostName = hostname;
         this.username = username;
         this.password = password;
         this.token = null;
 
         final HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+        clientBuilder.setSSLSocketFactory(RestClientUtils.getSSLSF());
         if (IS_PROXY) {
             RestClientUtils.setClientProxy(clientBuilder, PROXY_HOST, Integer.parseInt(PROXY_PORT));
         }
@@ -127,7 +132,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
                 .build();
     }
 
-    public CxRestLoginClientImpl(String hostname) {
+    public CxRestLoginClientImpl(String hostname) throws CxRestClientException {
         this.hostName = hostname;
         this.username = null;
         this.password = null;
@@ -143,6 +148,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         final CredentialsProvider credsProvider = new WindowsCredentialsProvider(new SystemDefaultCredentialsProvider());
 
         final HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+        clientBuilder.setSSLSocketFactory(RestClientUtils.getSSLSF());
         if (IS_PROXY) {
             RestClientUtils.setClientProxy(clientBuilder, PROXY_HOST, Integer.parseInt(PROXY_PORT));
         }
@@ -173,6 +179,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
 
             headers.add(new BasicHeader("Authorization", "Bearer " + jsonResponse.getAccessToken()));
             final HttpClientBuilder clientBuilder = HttpClientBuilder.create().setDefaultHeaders(headers);
+            clientBuilder.setSSLSocketFactory(RestClientUtils.getSSLSF());
             if (IS_PROXY) {
                 RestClientUtils.setClientProxy(clientBuilder, PROXY_HOST, Integer.parseInt(PROXY_PORT));
             }
@@ -183,15 +190,18 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         } catch (IOException | CxValidateResponseException e) {
             log.error("Fail to login with credentials: " + e.getMessage());
             throw new CxRestLoginClientException("Fail to login with credentials: " + e.getMessage());
+        } catch (CxRestClientException e) {
+            e.printStackTrace();
         } finally {
             HttpClientUtils.closeQuietly(loginResponse);
         }
     }
 
     @Override
-    public void tokenLogin() throws CxRestLoginClientException {
+    public void tokenLogin() throws CxRestClientException {
         if (headers.size() == 2) {
             final HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+            clientBuilder.setSSLSocketFactory(RestClientUtils.getSSLSF());
             if (IS_PROXY) {
                 RestClientUtils.setClientProxy(clientBuilder, PROXY_HOST, Integer.parseInt(PROXY_PORT));
             }
@@ -206,7 +216,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
     }
 
     @Override
-    public void ssoLogin() throws CxRestLoginClientException {
+    public void ssoLogin() throws CxRestClientException {
         HttpUriRequest request;
         HttpResponse loginResponse = null;
         try {
@@ -238,6 +248,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         headers.add(new BasicHeader("cookie", String.format("CXCSRFToken=%s; cxCookie=%s", csrfToken, cxCookie)));
 
         final HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+        clientBuilder.setSSLSocketFactory(RestClientUtils.getSSLSF());
         if (IS_PROXY) {
             RestClientUtils.setClientProxy(clientBuilder, PROXY_HOST, Integer.parseInt(PROXY_PORT));
         }

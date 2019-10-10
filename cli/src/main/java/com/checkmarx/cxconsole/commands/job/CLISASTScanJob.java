@@ -1,5 +1,6 @@
 package com.checkmarx.cxconsole.commands.job;
 
+import com.checkmarx.cxconsole.clients.exception.CxRestClientException;
 import com.checkmarx.cxconsole.clients.general.dto.ProjectDTO;
 import com.checkmarx.cxconsole.clients.general.exception.CxRestGeneralClientException;
 import com.checkmarx.cxconsole.clients.general.exception.CxScanPrerequisitesValidatorException;
@@ -41,7 +42,7 @@ public class CLISASTScanJob extends CLIScanJob {
 
     private CxRestSASTClient cxRestSASTClient;
 
-    public CLISASTScanJob(CLIScanParametersSingleton params, boolean isAsyncScan) {
+    public CLISASTScanJob(CLIScanParametersSingleton params, boolean isAsyncScan) throws CxRestClientException {
         super(params, isAsyncScan);
     }
 

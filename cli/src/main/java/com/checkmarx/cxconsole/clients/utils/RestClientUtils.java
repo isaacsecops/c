@@ -1,5 +1,6 @@
 package com.checkmarx.cxconsole.clients.utils;
 
+import com.checkmarx.cxconsole.clients.exception.CxRestClientException;
 import com.checkmarx.cxconsole.clients.exception.CxValidateResponseException;
 import com.checkmarx.cxconsole.clients.sast.dto.ScanSettingDTO;
 import com.checkmarx.cxconsole.clients.sast.dto.ScanSettingDTODeserializer;
@@ -9,15 +10,24 @@ import com.fasterxml.jackson.databind.type.CollectionType;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.TrustAllStrategy;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
+import org.apache.http.ssl.SSLContexts;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
+import javax.net.ssl.SSLContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 /**
@@ -25,6 +35,12 @@ import java.util.List;
  */
 public class RestClientUtils {
     private static Logger log = Logger.getLogger(RestClientUtils.class);
+
+    private static String HTTP_HOST = System.getProperty("http.proxyHost");
+    private static String HTTP_PORT = System.getProperty("http.proxyPort");
+
+    private static String HTTPS_HOST = System.getProperty("https.proxyHost");
+    private static String HTTPS_PORT = System.getProperty("https.proxyPort");
 
     private RestClientUtils() {
         throw new IllegalStateException("Utility class");
@@ -106,4 +122,16 @@ public class RestClientUtils {
                 .setProxy(proxyObject)
                 .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
     }
+
+    public static SSLConnectionSocketFactory getSSLSF() throws CxRestClientException {
+        TrustStrategy acceptingTrustStrategy = new TrustAllStrategy();
+        SSLContext sslContext;
+        try {
+            sslContext = SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
+        } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
+            throw new CxRestClientException("Fail to set trust all certificate, 'SSLConnectionSocketFactory'", e);
+        }
+        return new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
+    }
+
 }

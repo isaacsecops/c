@@ -1,5 +1,6 @@
 package com.checkmarx.cxconsole.commands;
 
+import com.checkmarx.cxconsole.clients.exception.CxRestClientException;
 import com.checkmarx.cxconsole.commands.constants.Commands;
 import com.checkmarx.cxconsole.commands.exceptions.CLICommandException;
 import com.checkmarx.cxconsole.commands.exceptions.CLICommandParameterValidatorException;
@@ -30,7 +31,7 @@ class OSAScanCommand extends CLICommand {
     }
 
     @Override
-    protected int executeCommand() throws CLICommandException {
+    protected int executeCommand() throws CLICommandException, CxRestClientException {
         CLIScanJob job;
         if (!isAsyncScan) {
             job = new CLIOSAScanJob(params, false);

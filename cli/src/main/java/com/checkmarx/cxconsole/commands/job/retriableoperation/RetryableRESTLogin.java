@@ -1,5 +1,6 @@
 package com.checkmarx.cxconsole.commands.job.retriableoperation;
 
+import com.checkmarx.cxconsole.clients.exception.CxRestClientException;
 import com.checkmarx.cxconsole.clients.login.CxRestLoginClient;
 import com.checkmarx.cxconsole.clients.login.exceptions.CxRestLoginClientException;
 import com.checkmarx.cxconsole.commands.job.exceptions.CLIJobException;
@@ -40,6 +41,8 @@ public class RetryableRESTLogin extends RetryableOperation {
             }
         } catch (CxRestLoginClientException e) {
             throw new CLIJobException("Unsuccessful login.");
+        } catch (CxRestClientException e) {
+            e.printStackTrace();
         }
 
         log.info("Login was completed successfully");

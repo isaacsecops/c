@@ -1,5 +1,6 @@
 package com.checkmarx.cxconsole.commands.job;
 
+import com.checkmarx.cxconsole.clients.exception.CxRestClientException;
 import com.checkmarx.cxconsole.clients.general.CxRestGeneralClient;
 import com.checkmarx.cxconsole.clients.general.CxRestGeneralClientImpl;
 import com.checkmarx.cxconsole.clients.login.CxRestLoginClient;
@@ -26,7 +27,7 @@ public abstract class CLIScanJob implements Callable<Integer> {
     private String errorMsg;
     protected CLIScanParametersSingleton params;
 
-    CLIScanJob(CLIScanParametersSingleton params, boolean isAsyncScan) {
+    CLIScanJob(CLIScanParametersSingleton params, boolean isAsyncScan) throws CxRestClientException {
         this.params = params;
         this.isAsyncScan = isAsyncScan;
         cxRestLoginClient = ConfigMgr.getRestWSMgr(this.params);
