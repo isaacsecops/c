@@ -2,8 +2,6 @@ package com.checkmarx.cxconsole.parameters;
 
 import com.checkmarx.cxconsole.clients.general.dto.ProjectDTO;
 import com.checkmarx.cxconsole.clients.general.dto.TeamDTO;
-import com.checkmarx.cxconsole.commands.exceptions.CLICommandParameterValidatorException;
-import com.checkmarx.cxconsole.parameters.exceptions.CLIParameterParsingException;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
@@ -43,11 +41,11 @@ public class CLIMandatoryParameters extends AbstractCLIScanParameters {
             "If project with such a name doesn't exist in the system, new project will be created.").build();
 
 
-    CLIMandatoryParameters() throws CLIParameterParsingException {
+    CLIMandatoryParameters() {
         initCommandLineOptions();
     }
 
-    void initMandatoryParams(CommandLine parsedCommandLineArguments) throws CLICommandParameterValidatorException {
+    void initMandatoryParams(CommandLine parsedCommandLineArguments) {
         host = parsedCommandLineArguments.getOptionValue(PARAM_HOST.getOpt());
         originalHost = parsedCommandLineArguments.getOptionValue(PARAM_HOST.getOpt());
         username = parsedCommandLineArguments.getOptionValue(PARAM_USER.getOpt());
@@ -62,8 +60,7 @@ public class CLIMandatoryParameters extends AbstractCLIScanParameters {
         if (projectNameWithTeamPath != null) {
             projectNameWithTeamPath = projectNameWithTeamPath.replaceAll("/", "\\\\");
             projectName = extractProjectName(projectNameWithTeamPath);
-            team = extractTeamPath(projectNameWithTeamPath, projectName);
-
+            team = extractTeamPath(projectNameWithTeamPath);
             project = new ProjectDTO(projectName);
         }
     }
@@ -77,13 +74,22 @@ public class CLIMandatoryParameters extends AbstractCLIScanParameters {
         }
     }
 
-    private TeamDTO extractTeamPath(String fullPath, String project) throws CLICommandParameterValidatorException {
-        final int projectNameIndex = fullPath.lastIndexOf("\\" + project);
-        if (-1 == projectNameIndex) {
-            throw new CLICommandParameterValidatorException("Please provide team and project in the format TEAM_NAME\\PROJECT_NAME. Provided: " + fullPath);
+    private TeamDTO extractTeamPath(String projectNameWithFullPath) {
+        String[] pathParts = projectNameWithFullPath.split("\\\\");
+        String team;
+        if ((pathParts.length <= 0)) {
+            return null;
+        } else {
+            if (projectNameWithFullPath.contains("\\")) {
+                team = projectNameWithFullPath.substring(0, projectNameWithFullPath.lastIndexOf("\\"));
+            } else {
+                team = projectNameWithFullPath;
+            }
+            if (!team.startsWith("\\")) {
+                team = "\\" + team;
+            }
+            return new TeamDTO(team);
         }
-        final String teamPath = fullPath.substring(0, projectNameIndex);
-        return !teamPath.startsWith("\\") ? new TeamDTO("\\" + teamPath) : new TeamDTO(teamPath);
     }
 
 
