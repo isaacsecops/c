@@ -2,7 +2,6 @@ package com.checkmarx.cxconsole.parameters;
 
 import com.checkmarx.cxconsole.clients.general.dto.ProjectDTO;
 import com.checkmarx.cxconsole.clients.general.dto.TeamDTO;
-import com.checkmarx.cxconsole.parameters.exceptions.CLIParameterParsingException;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
@@ -42,7 +41,7 @@ public class CLIMandatoryParameters extends AbstractCLIScanParameters {
             "If project with such a name doesn't exist in the system, new project will be created.").build();
 
 
-    CLIMandatoryParameters() throws CLIParameterParsingException {
+    CLIMandatoryParameters() {
         initCommandLineOptions();
     }
 
@@ -81,7 +80,11 @@ public class CLIMandatoryParameters extends AbstractCLIScanParameters {
         if ((pathParts.length <= 0)) {
             return null;
         } else {
-            team = projectNameWithFullPath.replace("\\" + projectName, "");
+            if (projectNameWithFullPath.contains("\\")) {
+                team = projectNameWithFullPath.substring(0, projectNameWithFullPath.lastIndexOf("\\"));
+            } else {
+                team = projectNameWithFullPath;
+            }
             if (!team.startsWith("\\")) {
                 team = "\\" + team;
             }
