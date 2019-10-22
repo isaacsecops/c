@@ -8,6 +8,7 @@ import com.checkmarx.cxconsole.clients.token.utils.TokenHttpEntityBuilder;
 import com.checkmarx.cxconsole.clients.utils.RestClientUtils;
 import com.google.common.base.Strings;
 import org.apache.http.Header;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.client.CookieStore;
@@ -164,7 +165,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
             RestClientUtils.validateTokenResponse(loginResponse, 200, FAIL_TO_VALIDATE_TOKEN_RESPONSE_ERROR);
             RestGetAccessTokenDTO jsonResponse = RestClientUtils.parseJsonFromResponse(loginResponse, RestGetAccessTokenDTO.class);
 
-            authHeader = new BasicHeader("Authorization", "Bearer " + jsonResponse.getAccessToken());
+            authHeader = new BasicHeader(HttpHeaders.AUTHORIZATION, "Bearer " + jsonResponse.getAccessToken());
             headers.add(authHeader);
             final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
             if (IS_PROXY) {
@@ -265,7 +266,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         } finally {
             HttpClientUtils.closeQuietly(getAccessTokenResponse);
         }
-        authHeader = new BasicHeader("Authorization", "Bearer " + accessToken);
+        authHeader = new BasicHeader(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
         headers.add(authHeader);
     }
 
