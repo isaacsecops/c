@@ -24,6 +24,7 @@ import org.apache.http.config.RegistryBuilder;
 import org.apache.http.cookie.Cookie;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.NoConnectionReuseStrategy;
 import org.apache.http.impl.auth.BasicSchemeFactory;
 import org.apache.http.impl.auth.DigestSchemeFactory;
 import org.apache.http.impl.auth.win.WindowsCredentialsProvider;
@@ -87,6 +88,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
 
         try {
             client = clientBuilder
+                    .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
                     .setDefaultHeaders(headers)
                     .useSystemProperties()
                     .build();
@@ -116,6 +118,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         }
 
         client = clientBuilder
+                .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
                 .useSystemProperties()
                 .build();
     }
@@ -143,6 +146,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
 
         client = clientBuilder
                 .useSystemProperties()
+                .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
                 .setDefaultCredentialsProvider(credsProvider)
                 .setDefaultAuthSchemeRegistry(authSchemeRegistry)
                 .setDefaultCookieStore(cookieStore)
@@ -172,6 +176,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
                 RestClientUtils.setProxy(clientBuilder);
             }
             client = clientBuilder
+                    .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
                     .setDefaultHeaders(headers)
                     .useSystemProperties()
                     .build();
@@ -192,6 +197,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
                 RestClientUtils.setProxy(clientBuilder);
             }
             client = clientBuilder
+                    .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
                     .setDefaultHeaders(headers)
                     .useSystemProperties()
                     .build();
@@ -239,6 +245,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         }
         client = clientBuilder
                 .useSystemProperties()
+                .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
                 .setDefaultHeaders(headers).build();
         isLoggedIn = true;
     }
