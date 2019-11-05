@@ -80,11 +80,7 @@ public class CLIMandatoryParameters extends AbstractCLIScanParameters {
         if ((pathParts.length <= 0)) {
             return null;
         } else {
-            if (projectNameWithFullPath.contains("\\")) {
-                team = projectNameWithFullPath.substring(0, projectNameWithFullPath.lastIndexOf("\\"));
-            } else {
-                team = projectNameWithFullPath;
-            }
+            team = projectNameWithFullPath.contains("\\") ? projectNameWithFullPath.substring(0, projectNameWithFullPath.lastIndexOf("\\")) : projectNameWithFullPath;
             if (!team.startsWith("\\")) {
                 team = "\\" + team;
             }
