@@ -3,6 +3,7 @@ package com.checkmarx.cxconsole.clients.utils;
 import com.checkmarx.cxconsole.clients.arm.CxRestArmClient;
 import com.checkmarx.cxconsole.clients.arm.dto.Policy;
 import com.checkmarx.cxconsole.clients.arm.exceptions.CxRestARMClientException;
+import com.checkmarx.cxconsole.clients.exception.CxRestClientException;
 import com.checkmarx.cxconsole.clients.exception.CxValidateResponseException;
 import com.checkmarx.cxconsole.clients.general.dto.CxProviders;
 import com.checkmarx.cxconsole.clients.sast.dto.ScanSettingDTO;
@@ -11,18 +12,44 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
+import org.apache.http.auth.AuthSchemeProvider;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.client.config.CookieSpecs;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.TrustStrategy;
+import org.apache.http.impl.auth.BasicSchemeFactory;
+import org.apache.http.impl.auth.DigestSchemeFactory;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
-import org.apache.log4j.Logger;
+import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
+import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
+import org.apache.http.ssl.SSLContexts;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
+import javax.net.ssl.SSLContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -67,6 +94,11 @@ public class RestClientUtils {
         return mapper.readValue(createStringFromResponse(response).toString(), dtoClass);
     }
 
+    public static <ResponseObj> ResponseObj parseFromURL(String url, Class<ResponseObj> dtoClass) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.readValue(fromUrlToJson(url), dtoClass);
+    }
+
     private static StringBuilder createStringFromResponse(HttpResponse response) throws IOException {
         BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
 
@@ -75,7 +107,6 @@ public class RestClientUtils {
         while ((line = rd.readLine()) != null) {
             result.append(line);
         }
-
         return result;
     }
 
@@ -87,7 +118,6 @@ public class RestClientUtils {
 
         return mapper.readValue(createStringFromResponse(response).toString(), ScanSettingDTO.class);
     }
-
 
     public static void validateClientResponse(HttpResponse response, int status, String message) throws CxValidateResponseException {
         try {
@@ -121,12 +151,22 @@ public class RestClientUtils {
         }
     }
 
-    public static void setClientProxy(HttpClientBuilder clientBuilder, String proxyHost, int proxyPort) {
+    public static HttpClientBuilder genHttpClientBuilder() {
+        try {
+            return HttpClients.custom().setSSLSocketFactory(getSSLSF());
+        } catch (CxRestClientException e) {
+            log.error("[CX-CLI] Fail to set SSL context", e);
+        }
+        return HttpClients.custom();
+    }
+
+    public static void setClientProxy(HttpClientBuilder clientBuilder, String proxyHost, int proxyPort) throws CxRestClientException {
         log.debug(String.format("Setting proxy to %s:%s", proxyHost, proxyPort));
         HttpHost proxyObject = new HttpHost(proxyHost, proxyPort);
         clientBuilder
                 .setProxy(proxyObject)
-                .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
+                .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy())
+                .setSSLSocketFactory(getSSLSF());
     }
 
     public static void setProxy(HttpClientBuilder cb) {
@@ -167,7 +207,6 @@ public class RestClientUtils {
                 .setDefaultCredentialsProvider(credsProvider)
                 .setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy())
                 .setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build())
-                .setSSLSocketFactory(getSSLSF())
                 .setConnectionManager(getHttpConnManager())
                 .setDefaultRequestConfig(genRequestConfig())
                 .setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
@@ -221,25 +260,31 @@ public class RestClientUtils {
         List<String> violatedPolicies = new ArrayList<>();
         int exitCode = SCAN_SUCCEEDED_EXIT_CODE;
         List<Policy> policiesViolations = armClient.getProjectViolations(projectId, provider.name());
-        for (Policy policy: policiesViolations) {
-                violatedPolicies.add(policy.getPolicyName());
+        for (Policy policy : policiesViolations) {
+            violatedPolicies.add(policy.getPolicyName());
         }
-        if(violatedPolicies.size() > 0){
+        if (violatedPolicies.size() > 0) {
             exitCode = POLICY_VIOLATION_ERROR_EXIT_CODE;
             StringBuilder builder = new StringBuilder();
             for (String policy : violatedPolicies) {
                 builder.append(policy);
                 builder.append(SEPARATOR);
             }
-            String commaSeparatedPolicies = builder.toString();
+            String commaSeperatedPolicies = builder.toString();
             //Remove last comma
-            commaSeparatedPolicies = commaSeparatedPolicies.substring(0, commaSeparatedPolicies.length() - SEPARATOR.length());
+            commaSeperatedPolicies = commaSeperatedPolicies.substring(0, commaSeperatedPolicies.length() - SEPARATOR.length());
             log.info("Policy status: Violated");
             log.info("Policy violations: " + violatedPolicies.size() + " - " + commaSeperatedPolicies);
 
-        } else{
+        } else {
             log.info("Policy Status: Compliant");
         }
         return exitCode;
+    }
+
+    static String fromUrlToJson(String url) {
+        url = url.replaceAll("=", "\":\"");
+        url = url.replaceAll("&", "\",\"");
+        return "{\"" + url + "\"}";
     }
 }

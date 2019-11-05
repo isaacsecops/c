@@ -1,21 +1,25 @@
 package com.checkmarx.cxconsole.clients.login;
 
 import com.checkmarx.cxconsole.clients.exception.CxValidateResponseException;
+import com.checkmarx.cxconsole.clients.login.dto.Provider;
 import com.checkmarx.cxconsole.clients.login.dto.RestGetAccessTokenDTO;
 import com.checkmarx.cxconsole.clients.login.exceptions.CxRestLoginClientException;
 import com.checkmarx.cxconsole.clients.login.utils.LoginResourceURIBuilder;
-import com.checkmarx.cxconsole.clients.token.utils.TokenHttpEntityBuilder;
+import com.checkmarx.cxconsole.clients.sast.utils.SastHttpEntityBuilder;
 import com.checkmarx.cxconsole.clients.utils.RestClientUtils;
 import com.google.common.base.Strings;
+import com.google.gson.Gson;
 import org.apache.http.Header;
-import org.apache.http.HttpHost;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
 import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.AuthSchemes;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.client.utils.HttpClientUtils;
@@ -24,19 +28,28 @@ import org.apache.http.config.RegistryBuilder;
 import org.apache.http.cookie.Cookie;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.NoConnectionReuseStrategy;
 import org.apache.http.impl.auth.BasicSchemeFactory;
 import org.apache.http.impl.auth.DigestSchemeFactory;
 import org.apache.http.impl.auth.win.WindowsCredentialsProvider;
 import org.apache.http.impl.auth.win.WindowsNTLMSchemeFactory;
 import org.apache.http.impl.auth.win.WindowsNegotiateSchemeFactory;
-import org.apache.http.impl.client.*;
+import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.SystemDefaultCredentialsProvider;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
+import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -46,7 +59,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
 
     private static final String CX_COOKIE = "cxCookie";
     private static final String CSRF_TOKEN_HEADER = "CXCSRFToken";
-
+    private static final String AUTH_API_URL = "/cxrestapi/auth/";
     private static Logger log = Logger.getLogger(CxRestLoginClientImpl.class);
 
     private final String username;
@@ -78,13 +91,14 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
 
         headers.add(CLI_ORIGIN_HEADER);
 
-        final HttpClientBuilder clientBuilder = HttpClients.custom();
+        final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
         if (IS_PROXY) {
             RestClientUtils.setProxy(clientBuilder);
         }
 
         try {
             client = clientBuilder
+                    .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
                     .setDefaultHeaders(headers)
                     .useSystemProperties()
                     .build();
@@ -106,22 +120,16 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         this.password = password;
         this.token = null;
 
-        final HttpClientBuilder clientBuilder = HttpClientBuilder.create();
-        if (IS_PROXY) {
-            RestClientUtils.setClientProxy(clientBuilder, PROXY_HOST, Integer.parseInt(PROXY_PORT));
-        }
-
-        SSLContext sslContext = generateSSLContext(TLS_PROTOCOL, log);
         headers.add(CLI_ORIGIN_HEADER);
 
-        final HttpClientBuilder clientBuilder = HttpClients.custom();
+        final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
         if (IS_PROXY) {
             RestClientUtils.setProxy(clientBuilder);
         }
 
         client = clientBuilder
+                .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
                 .useSystemProperties()
-                .setDefaultHeaders(headers)
                 .build();
     }
 
@@ -132,6 +140,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         this.token = null;
 
         headers.add(CLI_ORIGIN_HEADER);
+
         final Registry<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider>create()
                 .register(AuthSchemes.BASIC, new BasicSchemeFactory())
                 .register(AuthSchemes.DIGEST, new DigestSchemeFactory())
@@ -140,13 +149,14 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
                 .build();
         final CredentialsProvider credsProvider = new WindowsCredentialsProvider(new SystemDefaultCredentialsProvider());
 
-        final HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+        final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
         if (IS_PROXY) {
             RestClientUtils.setProxy(clientBuilder);
         }
 
         client = clientBuilder
                 .useSystemProperties()
+                .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
                 .setDefaultCredentialsProvider(credsProvider)
                 .setDefaultAuthSchemeRegistry(authSchemeRegistry)
                 .setDefaultCookieStore(cookieStore)
@@ -169,13 +179,15 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
             RestClientUtils.validateTokenResponse(loginResponse, 200, FAIL_TO_VALIDATE_TOKEN_RESPONSE_ERROR);
             RestGetAccessTokenDTO jsonResponse = RestClientUtils.parseJsonFromResponse(loginResponse, RestGetAccessTokenDTO.class);
 
-            headers.add(new BasicHeader("Authorization", "Bearer " + jsonResponse.getAccessToken()));
-            client = HttpClientBuilder.create().setDefaultHeaders(headers).build();
-            final HttpClientBuilder clientBuilder = HttpClientBuilder.create().setDefaultHeaders(headers);
+            authHeader = new BasicHeader(HttpHeaders.AUTHORIZATION, "Bearer " + jsonResponse.getAccessToken());
+            headers.add(authHeader);
+            final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
             if (IS_PROXY) {
                 RestClientUtils.setProxy(clientBuilder);
             }
             client = clientBuilder
+                    .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
+                    .setDefaultHeaders(headers)
                     .useSystemProperties()
                     .build();
             isLoggedIn = true;
@@ -190,11 +202,12 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
     @Override
     public void tokenLogin() throws CxRestLoginClientException {
         if (headers.size() == 2) {
-            final HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+            final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
             if (IS_PROXY) {
-                RestClientUtils.setClientProxy(clientBuilder, PROXY_HOST, Integer.parseInt(PROXY_PORT));
+                RestClientUtils.setProxy(clientBuilder);
             }
             client = clientBuilder
+                    .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
                     .setDefaultHeaders(headers)
                     .useSystemProperties()
                     .build();
@@ -236,7 +249,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         headers.add(new BasicHeader(CSRF_TOKEN_HEADER, csrfToken));
         headers.add(new BasicHeader("cookie", String.format("CXCSRFToken=%s; cxCookie=%s", csrfToken, cxCookie)));
 
-        final HttpClientBuilder clientBuilder = HttpClients.custom();
+        final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
         if (IS_PROXY) {
             RestClientUtils.setProxy(clientBuilder);
         }
@@ -288,7 +301,8 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         } finally {
             HttpClientUtils.closeQuietly(getAccessTokenResponse);
         }
-        headers.add(new BasicHeader("Authorization", "Bearer " + accessToken));
+        authHeader = new BasicHeader(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
+        headers.add(authHeader);
     }
 
     @Override
@@ -319,16 +333,6 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
     @Override
     public Header getAuthHeader() {
         return authHeader;
-    }
-
-    private SSLContext generateSSLContext(String protocol, Logger log) {
-        SSLContext sslContext = null;
-        try {
-            sslContext = SSLContextBuilder.create().setProtocol(protocol).build();
-        } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            log.warn("Failed to build SSL context error was: " + e.getMessage());
-        }
-        return sslContext;
     }
 
     private StringEntity generateEntity() throws CxRestLoginClientException, IOException {
