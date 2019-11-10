@@ -1,6 +1,8 @@
 package com.checkmarx.cxconsole.clients.login;
 
 import com.checkmarx.cxconsole.clients.exception.CxValidateResponseException;
+import com.checkmarx.cxconsole.clients.general.CxRestGeneralClient;
+import com.checkmarx.cxconsole.clients.general.CxRestGeneralClientImpl;
 import com.checkmarx.cxconsole.clients.login.dto.Provider;
 import com.checkmarx.cxconsole.clients.login.dto.RestGetAccessTokenDTO;
 import com.checkmarx.cxconsole.clients.login.exceptions.CxRestLoginClientException;
@@ -18,6 +20,7 @@ import org.apache.http.client.CookieStore;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -80,6 +83,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
     private static CookieStore cookieStore = new BasicCookieStore();
     private String cxCookie = null;
     private String csrfToken = null;
+    private CxRestGeneralClient generalClient;
 
     private static final boolean IS_PROXY = Boolean.parseBoolean(System.getProperty("proxySet"));
 
@@ -162,6 +166,8 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
                 .setDefaultCookieStore(cookieStore)
                 .setDefaultHeaders(headers)
                 .build();
+
+        this.generalClient = new CxRestGeneralClientImpl(this);
     }
 
     @Override
@@ -219,11 +225,78 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
 
     @Override
     public void ssoLogin() throws CxRestLoginClientException {
+
+        if (generalClient.getCxVersion().equals("Pre 9.0")) {
+            ssoLegacyLogin();
+            return;
+        }
+
+        HttpUriRequest request;
+        HttpResponse loginResponse = null;
+        final String BASE_URL = "/CxRestAPI/auth/identity/";
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setRedirectsEnabled(false)
+                .setAuthenticationEnabled(true)
+                .setCookieSpec(CookieSpecs.STANDARD)
+                .build();
+        try {
+            //Request1
+            request = RequestBuilder.post()
+                    .setUri(String.valueOf(LoginResourceURIBuilder.buildWindowsAuthenticationLoginURL(new URL(hostName))))
+                    .setConfig(requestConfig)
+                    .setHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_FORM_URLENCODED.toString())
+                    .setEntity(generateEntity())
+                    .build();
+            loginResponse = client.execute(request);
+
+            //Request2
+            String cookies = retrieveCookies();
+            String redirectURL = loginResponse.getHeaders("Location")[0].getValue();
+            request = RequestBuilder.get()
+                    .setUri(hostName + BASE_URL + redirectURL)
+                    .setConfig(requestConfig)
+                    .setHeader("Cookie", cookies)
+                    .setHeader("Upgrade-Insecure-Requests", "1")
+                    .build();
+            loginResponse = client.execute(request);
+
+            //Request3
+            cookies = retrieveCookies();
+            redirectURL = loginResponse.getHeaders("Location")[0].getValue();
+            request = RequestBuilder.get()
+                    .setUri(hostName + redirectURL)
+                    .setConfig(requestConfig)
+                    .setHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_FORM_URLENCODED.toString())
+                    .setHeader("Cookie", cookies)
+                    .build();
+            loginResponse = client.execute(request);
+
+            final String accessToken = extractAuthTokenFromResponse(loginResponse);
+            CxRestLoginClientImpl.headers.add(new BasicHeader("Authorization", "Bearer " + accessToken));
+        } catch (IOException | CxValidateResponseException e) {
+            log.error("Fail to login with windows authentication: " + e.getMessage());
+            throw new CxRestLoginClientException("Fail to login with windows authentication: " + e.getMessage());
+        } finally {
+            HttpClientUtils.closeQuietly(loginResponse);
+        }
+        isLoggedIn = true;
+
+        final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
+        if (IS_PROXY) {
+            RestClientUtils.setProxy(clientBuilder);
+        }
+        client = clientBuilder
+                .useSystemProperties()
+                .setDefaultHeaders(headers).build();
+        isLoggedIn = true;
+    }
+
+    private void ssoLegacyLogin() throws CxRestLoginClientException {
         HttpUriRequest request;
         HttpResponse loginResponse = null;
         try {
             request = RequestBuilder.post()
-                    .setUri(String.valueOf(LoginResourceURIBuilder.buildWindowsAuthenticationLoginURL(new URL(hostName))))
+                    .setUri(String.valueOf(LoginResourceURIBuilder.buildLegactWindowsAuthenticationLoginURL(new URL(hostName))))
                     .setConfig(RequestConfig.DEFAULT)
                     .setEntity(new StringEntity(""))
                     .build();
