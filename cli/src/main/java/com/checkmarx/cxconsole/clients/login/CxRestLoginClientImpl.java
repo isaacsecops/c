@@ -160,7 +160,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
 
         client = clientBuilder
                 .useSystemProperties()
-                .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
+//                .setConnectionReuseStrategy(new NoConnectionReuseStrategy())
                 .setDefaultCredentialsProvider(credsProvider)
                 .setDefaultAuthSchemeRegistry(authSchemeRegistry)
                 .setDefaultCookieStore(cookieStore)
