@@ -239,6 +239,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
                 .setAuthenticationEnabled(true)
                 .setCookieSpec(CookieSpecs.STANDARD)
                 .build();
+
         try {
             //Request1
             request = RequestBuilder.post()
@@ -281,14 +282,6 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
         }
         isLoggedIn = true;
 
-        final HttpClientBuilder clientBuilder = RestClientUtils.genHttpClientBuilder();
-        if (IS_PROXY) {
-            RestClientUtils.setProxy(clientBuilder);
-        }
-        client = clientBuilder
-                .useSystemProperties()
-                .setDefaultHeaders(headers).build();
-        isLoggedIn = true;
     }
 
     private void ssoLegacyLogin() throws CxRestLoginClientException {
