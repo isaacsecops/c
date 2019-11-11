@@ -32,7 +32,6 @@ public class SastResourceURIBuilder {
     private static final String SCAN_RESULTS_RESOURCE = "/resultsStatistics";
     private static final String SAST_VERSION = "/system/version";
 
-    //TODO: deprecated API should be removed by 9.30
     private static final String REVOCATION_RESOURCE = "revocation";
     private static final String TOKEN_LOGIN_RESOURCE = "token";
     private static final String IDENTITY_CONNECT_RESOURCE = "auth/identity/connect";

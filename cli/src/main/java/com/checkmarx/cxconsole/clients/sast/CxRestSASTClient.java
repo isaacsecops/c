@@ -55,16 +55,8 @@ public interface CxRestSASTClient<T extends RemoteSourceScanSettingDTO> extends 
 
     String getSastVersion() throws CxRestSASTClientException;
 
-    /**
-     * @deprecated This method will be removed starting from 9.30 as Access Control does not support access tokens
-     */
-    @Deprecated
     String generateToken(URL serverUrl, String userName, String password) throws CxRestClientException;
 
-    /**
-     * @deprecated This method will be removed starting from 9.30 as Access Control does not support access tokens
-     */
-    @Deprecated
     void revokeToken(URL serverUrl, String token) throws CxRestClientException;
 
 }

@@ -117,8 +117,6 @@ public class SastHttpEntityBuilder {
         return new StringEntity(jsonObject.toString(), ContentType.APPLICATION_JSON);
     }
 
-    //TODO: remove these methods by 9.30
-
     public static StringEntity createGenerateTokenParamsEntity(String userName, String password, boolean isLegacy) throws CxRestClientException {
         List<NameValuePair> urlParameters = new ArrayList<>();
         urlParameters.add(new BasicNameValuePair(USERNAME_KEY, userName));
