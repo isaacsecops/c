@@ -149,7 +149,7 @@ public class OsaWSFSAUtil {
             log.info("Starting FSA component scan");
             osaDependenciesJson = componentScan.scan();
             log.info("FSA Dependencies Found");
-            log.trace("List of files sent to WhiteSource: " + mapper.writerWithDefaultPrettyPrinter().writeValueAsString(osaDependenciesJson));
+            log.trace("List of files sent to OSA: " + mapper.writerWithDefaultPrettyPrinter().writeValueAsString(osaDependenciesJson));
         } catch (JsonProcessingException e) {
             log.error("Can't write properties and list of files sent to WS " + e.getMessage());
         }
