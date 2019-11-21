@@ -18,6 +18,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
 
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -43,7 +44,7 @@ public class CxConsoleLauncher {
      */
     public static void main(String[] args) {
         int exitCode;
-        DOMConfigurator.configure("./log4j.xml");
+        DOMConfigurator.configure("src"+ File.separator +"main" + File.separator + "resources"+ File.separator +"log4j.xml");
 
         exitCode = runCli(args);
         if (exitCode == SCAN_SUCCEEDED_EXIT_CODE) {
