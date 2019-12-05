@@ -28,15 +28,16 @@ public class CommandUtils {
             if (isCxWebServiceAvailable(originalHost + CX_SWAGGER)) {
                 return originalHost;
             }
-        }
-        host = "http://" + originalHost;
-        if (isCxWebServiceAvailable(host + CX_SWAGGER)) {
-            return host;
-        }
+        } else {
+            host = "http://" + originalHost;
+            if (isCxWebServiceAvailable(host + CX_SWAGGER)) {
+                return host;
+            }
 
-        host = "https://" + originalHost;
-        if (isCxWebServiceAvailable(host + CX_SWAGGER)) {
-            return host;
+            host = "https://" + originalHost;
+            if (isCxWebServiceAvailable(host + CX_SWAGGER)) {
+                return host;
+            }
         }
 
         throw new CxRestClientException("Cx web service is not available at: " + originalHost);
