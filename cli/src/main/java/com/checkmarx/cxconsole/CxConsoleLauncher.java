@@ -10,12 +10,15 @@ import com.checkmarx.cxconsole.parameters.CLIScanParametersSingleton;
 import com.checkmarx.cxconsole.utils.ConfigMgr;
 import com.checkmarx.cxconsole.utils.ConsoleUtils;
 import com.checkmarx.cxconsole.utils.CustomStringList;
+import org.apache.commons.io.IOUtils;
+import org.apache.http.Consts;
 import org.apache.log4j.Appender;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
 
+import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -42,7 +45,30 @@ public class CxConsoleLauncher {
     public static void main(String[] args) {
         int exitCode;
         DOMConfigurator.configure("./log4j.xml");
+        String propFilePath=null;
+        for(int i=0;i<args.length;i++) {
+            log.info(args[i]);
+        }
 
+
+        for(int i=0;i<args.length;i++)
+        {
+            if("-Dfile".equals(args[i]))
+            {
+                propFilePath=args[i+1];
+                break;
+            }
+
+        }
+        if(propFilePath!=null)
+        {
+            try {
+                String argsStr = IOUtils.toString(new FileInputStream(propFilePath), Consts.UTF_8);
+                args=argsStr.split("\r\n");
+            } catch (Exception e) {
+                log.error("can't read file");
+            }
+        }
         exitCode = runCli(args);
         if (exitCode == SCAN_SUCCEEDED_EXIT_CODE) {
             log.info("Job completed successfully - exit code " + exitCode);
