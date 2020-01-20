@@ -39,6 +39,7 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -215,7 +216,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
             request = RequestBuilder.post()
                     .setUri(String.valueOf(LoginResourceURIBuilder.buildWindowsAuthenticationLoginURL(new URL(hostName))))
                     .setConfig(RequestConfig.DEFAULT)
-                    .setEntity(new StringEntity(""))
+                    .setEntity(new StringEntity("", StandardCharsets.UTF_8))
                     .build();
             loginResponse = client.execute(request);
 

@@ -89,4 +89,5 @@ public class LoggerUtils {
         normalPathName = normalPathName.replace("|", "_");
         return normalPathName;
     }
+
 }

@@ -4,8 +4,9 @@ import com.checkmarx.cxconsole.clients.exception.CxRestClientException;
 import com.checkmarx.cxconsole.clients.osa.dto.CreateOSAScanRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * Created by nirli on 21/02/2018.
@@ -23,7 +24,7 @@ public class OsaHttpEntityBuilder {
         String osaScanRequestStr;
         try {
             osaScanRequestStr = mapper.writeValueAsString(osaScanRequest);
-            return new StringEntity(osaScanRequestStr, ContentType.APPLICATION_JSON);
+            return new StringEntity(osaScanRequestStr, StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new CxRestClientException(ERROR_MESSAGE_PREFIX + e.getMessage());
         }

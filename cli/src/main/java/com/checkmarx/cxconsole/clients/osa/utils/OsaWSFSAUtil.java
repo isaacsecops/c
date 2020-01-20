@@ -79,14 +79,14 @@ public class OsaWSFSAUtil {
             ret.put("npm.ignoreScripts", "true");
             ret.put("bower.runPreStep", "false");
 
-            setResolveDependencies(ret,"true");
-        }else {
-            setResolveDependencies(ret,"false");
+            setResolveDependencies(ret, "true");
+        } else {
+            setResolveDependencies(ret, "false");
         }
         ret.put("acceptExtensionsList", ACCEPT_EXTENSIONS_LISTS);
-        if(cliosaParameters.getOsaDockerImageName() != null && !cliosaParameters.getOsaDockerImageName().isEmpty()){
-            ret.put("docker.scanImages","true");
-            ret.put("docker.includes",cliosaParameters.getOsaDockerImageName());
+        if (cliosaParameters.getOsaDockerImageName() != null && !cliosaParameters.getOsaDockerImageName().isEmpty()) {
+            ret.put("docker.scanImages", "true");
+            ret.put("docker.includes", cliosaParameters.getOsaDockerImageName());
         }
 
         return ret;

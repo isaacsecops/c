@@ -45,30 +45,7 @@ public class CxConsoleLauncher {
     public static void main(String[] args) {
         int exitCode;
         DOMConfigurator.configure("./log4j.xml");
-        String propFilePath=null;
-        for(int i=0;i<args.length;i++) {
-            log.info(args[i]);
-        }
 
-
-        for(int i=0;i<args.length;i++)
-        {
-            if("-Dfile".equals(args[i]))
-            {
-                propFilePath=args[i+1];
-                break;
-            }
-
-        }
-        if(propFilePath!=null)
-        {
-            try {
-                String argsStr = IOUtils.toString(new FileInputStream(propFilePath), Consts.UTF_8);
-                args=argsStr.split("\r\n");
-            } catch (Exception e) {
-                log.error("can't read file");
-            }
-        }
         exitCode = runCli(args);
         if (exitCode == SCAN_SUCCEEDED_EXIT_CODE) {
             log.info("Job completed successfully - exit code " + exitCode);
@@ -86,6 +63,7 @@ public class CxConsoleLauncher {
      * @param args
      */
     public static int runCli(String[] args) {
+        args = overrideProperties(args);
 
         if (args == null || args.length == 0) {
             log.fatal("Missing command name. Available commands: " + CommandFactory.getCommandNames());
@@ -133,6 +111,29 @@ public class CxConsoleLauncher {
             log.error(e.getMessage());
             return errorCodeResolver(e.getMessage());
         }
+    }
+
+    private static String[] overrideProperties(String[] args) {
+        String propFilePath = null;
+
+        for (int i = 0; i < args.length; i++) {
+            if ("-propFile".equals(args[i])) {
+                propFilePath = args[i + 1];
+                break;
+            }
+        }
+
+        if (propFilePath != null) {
+            try {
+                log.info("Overriding properties from file: " + propFilePath);
+                String argsStr = IOUtils.toString(new FileInputStream(propFilePath), Consts.UTF_8);
+                args = argsStr.split("\\s+");
+            } catch (Exception e) {
+                log.error("can't read file", e);
+            }
+        }
+
+        return args;
     }
 
     private static void makeArgumentsLowCase(String[] argumentsLessCommandName) {

@@ -7,10 +7,10 @@ import com.checkmarx.cxconsole.clients.sast.exceptions.CxRestSASTClientException
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpEntity;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,7 +36,7 @@ public class SastHttpEntityBuilder {
             jsonInString = jsonInString.replace("\"postScanActionId\":0", "\"postScanActionId\":null");
         }
 
-        return new StringEntity(jsonInString, ContentType.APPLICATION_JSON);
+        return new StringEntity(jsonInString, StandardCharsets.UTF_8);
     }
 
 
@@ -48,7 +48,7 @@ public class SastHttpEntityBuilder {
         content.put("forceScan", String.valueOf(forceScan));
 
         JSONObject jsonObject = new JSONObject(content);
-        return new StringEntity(jsonObject.toString(), ContentType.APPLICATION_JSON);
+        return new StringEntity(jsonObject.toString(), StandardCharsets.UTF_8);
     }
 
     public static HttpEntity patchSastCommentEntity(String comment) {
@@ -56,7 +56,7 @@ public class SastHttpEntityBuilder {
         content.put("comment", comment);
         JSONObject jsonObject = new JSONObject(content);
 
-        return new StringEntity(jsonObject.toString(), ContentType.APPLICATION_JSON);
+        return new StringEntity(jsonObject.toString(), StandardCharsets.UTF_8);
     }
 
     public static <T extends RemoteSourceScanSettingDTO> HttpEntity createRemoteSourceEntity(T remoteSourceScanSettingDTO) throws CxRestSASTClientException {
@@ -68,7 +68,7 @@ public class SastHttpEntityBuilder {
             throw new CxRestSASTClientException("Error creating JSON string from remote source scan settings" + e.getMessage());
         }
 
-        return new StringEntity(jsonInString, ContentType.APPLICATION_JSON);
+        return new StringEntity(jsonInString, StandardCharsets.UTF_8);
     }
 
     public static HttpEntity createGITSourceEntity(String locationURL, String locationBranch) {
@@ -77,7 +77,7 @@ public class SastHttpEntityBuilder {
         content.put("branch", locationBranch);
         JSONObject jsonObject = new JSONObject(content);
 
-        return new StringEntity(jsonObject.toString(), ContentType.APPLICATION_JSON);
+        return new StringEntity(jsonObject.toString(), StandardCharsets.UTF_8);
     }
 
     public static HttpEntity createScanExclusionSettingEntity(String excludeFoldersPattern, String excludeFilesPattern) {
@@ -86,7 +86,7 @@ public class SastHttpEntityBuilder {
         content.put("excludeFilesPattern", excludeFilesPattern);
         JSONObject jsonObject = new JSONObject(content);
 
-        return new StringEntity(jsonObject.toString(), ContentType.APPLICATION_JSON);
+        return new StringEntity(jsonObject.toString(), StandardCharsets.UTF_8);
     }
 
     public static HttpEntity createReportEntity(long scanId, ReportType reportType) {
@@ -95,6 +95,6 @@ public class SastHttpEntityBuilder {
         content.put("scanId", String.valueOf(scanId));
         JSONObject jsonObject = new JSONObject(content);
 
-        return new StringEntity(jsonObject.toString(), ContentType.APPLICATION_JSON);
+        return new StringEntity(jsonObject.toString(), StandardCharsets.UTF_8);
     }
 }
