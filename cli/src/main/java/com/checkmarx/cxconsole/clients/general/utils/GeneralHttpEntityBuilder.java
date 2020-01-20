@@ -1,10 +1,10 @@
 package com.checkmarx.cxconsole.clients.general.utils;
 
 import com.checkmarx.cxconsole.clients.general.dto.ProjectDTO;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,6 +24,6 @@ public class GeneralHttpEntityBuilder {
         content.put("isPublic", "true");
 
         JSONObject jsonObject = new JSONObject(content);
-        return new StringEntity(jsonObject.toString(), ContentType.APPLICATION_JSON);
+        return new StringEntity(jsonObject.toString(), StandardCharsets.UTF_8);
     }
 }

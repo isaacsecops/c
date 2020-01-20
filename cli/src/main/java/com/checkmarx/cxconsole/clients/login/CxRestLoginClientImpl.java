@@ -46,6 +46,7 @@ import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
 
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
@@ -291,7 +292,7 @@ public class CxRestLoginClientImpl implements CxRestLoginClient {
             request = RequestBuilder.post()
                     .setUri(String.valueOf(LoginResourceURIBuilder.buildLegactWindowsAuthenticationLoginURL(new URL(hostName))))
                     .setConfig(RequestConfig.DEFAULT)
-                    .setEntity(new StringEntity(""))
+                    .setEntity(new StringEntity("",StandardCharsets.UTF_8))
                     .build();
             loginResponse = client.execute(request);
 

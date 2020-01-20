@@ -18,6 +18,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.client.utils.HttpClientUtils;
@@ -79,10 +80,18 @@ public class CxRestOSAClientImpl implements CxRestOSAClient {
         HttpResponse response = null;
 
         try {
+            int CONNECTION_TIMEOUT_MS = 45 * 1000;
+            RequestConfig requestConfig = RequestConfig.custom()
+                    .setConnectionRequestTimeout(CONNECTION_TIMEOUT_MS)
+                    .setConnectTimeout(CONNECTION_TIMEOUT_MS)
+                    .setSocketTimeout(CONNECTION_TIMEOUT_MS)
+                    .build();
+
             post = RequestBuilder.post()
                     .setUri(String.valueOf(OsaResourcesURIBuilder.buildCreateOSAFSScanURL(new URL(hostName))))
                     .setEntity(OsaHttpEntityBuilder.createOsaFSAEntity(osaScanRequest))
                     .setHeader(authHeader)
+                    .setConfig(requestConfig)
                     .setHeader(CLI_CONTENT_TYPE_AND_VERSION_HEADER)
                     .build();
             response = apacheClient.execute(post);
@@ -90,7 +99,7 @@ public class CxRestOSAClientImpl implements CxRestOSAClient {
             RestClientUtils.validateClientResponse(response, 201, "Fail to create OSA scan");
             return parseJsonFromResponse(response, CreateOSAScanResponse.class);
         } catch (IOException | CxRestClientException e) {
-            log.error(e.getMessage());
+            log.error("Fail to create OSA scan", e);
             throw new CxRestOSAClientException(e.getMessage());
         } finally {
             HttpClientUtils.closeQuietly(response);

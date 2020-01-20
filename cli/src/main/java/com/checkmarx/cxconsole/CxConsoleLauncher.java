@@ -1,6 +1,5 @@
 package com.checkmarx.cxconsole;
 
-import com.checkmarx.cxconsole.clients.login.CxRestLoginClientImpl;
 import com.checkmarx.cxconsole.clients.login.utils.SSLUtilities;
 import com.checkmarx.cxconsole.commands.CLICommand;
 import com.checkmarx.cxconsole.commands.CommandFactory;
@@ -11,14 +10,15 @@ import com.checkmarx.cxconsole.parameters.CLIScanParametersSingleton;
 import com.checkmarx.cxconsole.utils.ConfigMgr;
 import com.checkmarx.cxconsole.utils.ConsoleUtils;
 import com.checkmarx.cxconsole.utils.CustomStringList;
+import org.apache.commons.io.IOUtils;
+import org.apache.http.Consts;
 import org.apache.log4j.Appender;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
 
-
-import java.io.File;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -44,13 +44,13 @@ public class CxConsoleLauncher {
      */
     public static void main(String[] args) {
         int exitCode;
-        DOMConfigurator.configure("src"+ File.separator +"main" + File.separator + "resources"+ File.separator +"log4j.xml");
+        DOMConfigurator.configure("./log4j.xml");
 
         exitCode = runCli(args);
         if (exitCode == SCAN_SUCCEEDED_EXIT_CODE) {
             log.info("Job completed successfully - exit code " + exitCode);
         } else {
-            log.error("Failure -- " + errorMsgResolver(exitCode) + " - error code " + exitCode);
+            log.error("Failure - " + errorMsgResolver(exitCode) + " - error code " + exitCode);
         }
 
         System.exit(exitCode);
@@ -63,6 +63,7 @@ public class CxConsoleLauncher {
      * @param args
      */
     public static int runCli(String[] args) {
+        args = overrideProperties(args);
 
         if (args == null || args.length == 0) {
             log.fatal("Missing command name. Available commands: " + CommandFactory.getCommandNames());
@@ -77,13 +78,16 @@ public class CxConsoleLauncher {
 
         initConfigurationManager(args);
 
+        // Temporary solution
+        SSLUtilities.trustAllHostnames();
+        SSLUtilities.trustAllHttpsCertificates();
+
         String commandName = args[0];
         argumentsLessCommandName = java.util.Arrays.copyOfRange(args, 1, args.length);
         makeArgumentsLowCase(argumentsLessCommandName);
         CLICommand command = null;
         CLIScanParametersSingleton cliScanParametersSingleton;
         try {
-            log.info("Checking command line parameters...");
             CommandFactory.verifyCommand(commandName);
             cliScanParametersSingleton = CLIScanParametersSingleton.getCLIScanParameter();
             command = CommandFactory.getCommand(commandName, cliScanParametersSingleton);
@@ -98,11 +102,6 @@ public class CxConsoleLauncher {
             return errorCodeResolver(e.getMessage());
         }
 
-        if(cliScanParametersSingleton.getCliSharedParameters().isTrustAllCertificates()) {
-            SSLUtilities.trustAllHostnames();
-            SSLUtilities.trustAllHttpsCertificates();
-        }
-
         int exitCode;
         try {
             exitCode = command.execute();
@@ -112,6 +111,29 @@ public class CxConsoleLauncher {
             log.error(e.getMessage());
             return errorCodeResolver(e.getMessage());
         }
+    }
+
+    private static String[] overrideProperties(String[] args) {
+        String propFilePath = null;
+
+        for (int i = 0; i < args.length; i++) {
+            if ("-propFile".equals(args[i])) {
+                propFilePath = args[i + 1];
+                break;
+            }
+        }
+
+        if (propFilePath != null) {
+            try {
+                log.info("Overriding properties from file: " + propFilePath);
+                String argsStr = IOUtils.toString(new FileInputStream(propFilePath), Consts.UTF_8);
+                args = argsStr.split("\\s+");
+            } catch (Exception e) {
+                log.error("can't read file", e);
+            }
+        }
+
+        return args;
     }
 
     private static void makeArgumentsLowCase(String[] argumentsLessCommandName) {
@@ -127,9 +149,6 @@ public class CxConsoleLauncher {
         String confPath = null;
         if (configIndx != -1 && args.length > (configIndx + 1) && args[configIndx + 1] != null && !args[configIndx + 1].startsWith("-")) {
             confPath = args[configIndx + 1];
-        }
-        if (confPath != null) {
-            confPath = confPath.replace("..\\", "").replace("../", "");
         }
         ConfigMgr.initCfgMgr(confPath);
     }

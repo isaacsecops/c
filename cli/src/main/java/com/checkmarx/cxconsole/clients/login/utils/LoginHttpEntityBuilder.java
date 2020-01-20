@@ -1,10 +1,10 @@
 package com.checkmarx.cxconsole.clients.login.utils;
 
 import org.apache.http.HttpEntity;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,6 +26,6 @@ public class LoginHttpEntityBuilder {
         content.put(PASS_KEY, password);
         JSONObject jsonObject = new JSONObject(content);
 
-        return new StringEntity(jsonObject.toString(), ContentType.APPLICATION_JSON);
+        return new StringEntity(jsonObject.toString(), StandardCharsets.UTF_8);
     }
 }
