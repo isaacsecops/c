@@ -82,7 +82,7 @@ dependencies {
             'io.vertx:vertx-web:3.6.2',
             'com.github.junrar:junrar:1.0.1',
             'com.google.guava:guava:24.1.1-jre'
-    compile('com.checkmarx:cx-ws-fs-agent:20.0.2') {
+    compile('com.checkmarx:cx-ws-fs-agent:20.0.3') {
         exclude group: 'io.vertx:vertx-core'
         exclude group: 'io.vertx:vertx-web'
         exclude group: 'org.bouncycastle:bcprov-jdk15on'
