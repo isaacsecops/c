@@ -11,3 +11,10 @@ cli/.settings/org.eclipse.m2e.core.prefs
 cli/.gradle/
 *.log
 cli/build/
+*.iml
+
+
+# Project exclude paths
+/.gradle/
+/cli/out/
+/cli/out/production/classes/

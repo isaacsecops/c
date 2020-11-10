@@ -1,46 +1,58 @@
 package com.checkmarx.cxconsole;
 
-import com.checkmarx.cxconsole.commands.CommandsFactory;
-import com.checkmarx.cxconsole.commands.CxConsoleCommand;
-import com.checkmarx.cxconsole.utils.BuildVersion;
-import com.checkmarx.cxconsole.utils.CommandLineArgumentException;
+import com.checkmarx.cxconsole.clients.login.CxRestLoginClientImpl;
+import com.checkmarx.cxconsole.clients.login.utils.SSLUtilities;
+import com.checkmarx.cxconsole.commands.CLICommand;
+import com.checkmarx.cxconsole.commands.CommandFactory;
+import com.checkmarx.cxconsole.commands.exceptions.CLICommandException;
+import com.checkmarx.cxconsole.commands.exceptions.CLICommandFactoryException;
+import com.checkmarx.cxconsole.commands.exceptions.CLICommandParameterValidatorException;
+import com.checkmarx.cxconsole.parameters.CLIScanParametersSingleton;
 import com.checkmarx.cxconsole.utils.ConfigMgr;
+import com.checkmarx.cxconsole.utils.ConsoleUtils;
 import com.checkmarx.cxconsole.utils.CustomStringList;
-import com.checkmarx.cxviewer.ws.SSLUtilities;
-import org.apache.commons.cli.ParseException;
-import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Appender;
+import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.xml.DOMConfigurator;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import static com.checkmarx.cxconsole.commands.CxConsoleCommand.CODE_ERRROR;
+import static com.checkmarx.cxconsole.exitcodes.Constants.ExitCodes.GENERAL_ERROR_EXIT_CODE;
+import static com.checkmarx.cxconsole.exitcodes.Constants.ExitCodes.SCAN_SUCCEEDED_EXIT_CODE;
+import static com.checkmarx.cxconsole.exitcodes.ErrorHandler.errorCodeResolver;
+import static com.checkmarx.cxconsole.exitcodes.ErrorHandler.errorMsgResolver;
 
 /**
  * @author Oleksiy Mysnyk
  */
 public class CxConsoleLauncher {
 
-    public static Logger log = Logger.getLogger("com.checkmarx.cxconsole.CxConsoleLauncher");
-    public static String MSG_ERR_SRV_NAME_OR_NETWORK = "Server Name is invalid or network is unavailable.";
+    private static Logger log = Logger.getLogger(CxConsoleLauncher.class);
 
-    /**
-     * CxConsole commands
-     */
-    public static String COMM_CONNECT = "connect";
-    public static String COMM_QUIT = "quit";
-
+    private static final String INVALID_COMMAND_PARAMETERS_MSG = "Command parameters are invalid: ";
+    private static String[] argumentsLessCommandName;
 
     /**
      * Entry point to CxScan Console
      *
      * @param args
      */
-
     public static void main(String[] args) {
-        log.setLevel(Level.TRACE);
-        runCli(args);
+        int exitCode;
+        DOMConfigurator.configure("./log4j.xml");
+
+        exitCode = runCli(args);
+        if (exitCode == SCAN_SUCCEEDED_EXIT_CODE) {
+            log.info("Job completed successfully - exit code " + exitCode);
+        } else {
+            log.error("Failure -- " + errorMsgResolver(exitCode) + " - error code " + exitCode);
+        }
+
+        System.exit(exitCode);
     }
 
     /**
@@ -49,86 +61,89 @@ public class CxConsoleLauncher {
      *
      * @param args
      */
-
     public static int runCli(String[] args) {
+
+        if (args == null || args.length == 0) {
+            log.fatal("Missing command name. Available commands: " + CommandFactory.getCommandNames());
+            return GENERAL_ERROR_EXIT_CODE;
+        }
+
+        validateVerboseParameter(args);
+
+        log.info("CxConsole version " + ConsoleUtils.getBuildVersion());
+        log.info("CxConsole scan session started");
+        log.info("");
+
+        initConfigurationManager(args);
+
+        String commandName = args[0];
+        argumentsLessCommandName = java.util.Arrays.copyOfRange(args, 1, args.length);
+        makeArgumentsLowCase(argumentsLessCommandName);
+        CLICommand command = null;
+        CLIScanParametersSingleton cliScanParametersSingleton;
         try {
-            if (args == null || args.length == 0) {
-                log.fatal("Missing command name. Available commands: " + CommandsFactory.getCommandNames());
-                return CODE_ERRROR;
-            }
+            CommandFactory.verifyCommand(commandName);
+            cliScanParametersSingleton = CLIScanParametersSingleton.getCLIScanParameter();
+            command = CommandFactory.getCommand(commandName, cliScanParametersSingleton);
+            command.checkParameters();
+            log.info("Command line parameters were checked successfully");
+        } catch (CLICommandParameterValidatorException e) {
+            command.printHelp();
+            log.fatal(INVALID_COMMAND_PARAMETERS_MSG + e.getMessage() + "\n");
+            return errorCodeResolver(e.getMessage());
+        } catch (ExceptionInInitializerError | CLICommandFactoryException e) {
+            log.fatal(e);
+            return errorCodeResolver(e.getMessage());
+        }
 
-            log.info("CxConsole version " + BuildVersion.getBuildVersion());
-            log.info("CxConsole scan session started");
-            log.info("");
-
-
-            ArrayList<String> customArgs = new CustomStringList(Arrays.asList(args));
-
-            if (!customArgs.contains("-v".trim()) && !customArgs.contains("-verbose")) {
-                ((AppenderSkeleton) Logger.getRootLogger().getAppender("CA"))
-                        .setThreshold(Level.ERROR);
-            }
-
-
-            int configIndx = Arrays.asList(args).indexOf("-config");
-            String confPath = null;
-            if (configIndx != -1 && args.length > (configIndx + 1) && args[configIndx + 1] != null && !args[configIndx + 1].startsWith("-")) {
-                confPath = args[configIndx + 1];
-            }
-            ConfigMgr.initCfgMgr(confPath);
-
-            // Temporary solution
+        if(cliScanParametersSingleton.getCliSharedParameters().isTrustAllCertificates()) {
             SSLUtilities.trustAllHostnames();
             SSLUtilities.trustAllHttpsCertificates();
-
-            String commandName = args[0];
-            String[] argumentsLessCommandName = java.util.Arrays.copyOfRange(args, 1, args.length);
-            CxConsoleCommand command = CommandsFactory.getCommand(commandName);
-            if (command == null) {
-                log.error("Command \"" + commandName + "\" was not found. Available commands:\n"
-                        + CommandsFactory.getCommandNames());
-                return CODE_ERRROR;
-            }
-
-            try {
-                command.parseArguments(argumentsLessCommandName);
-
-                try {
-                    command.initKerberos();
-                    command.resolveServerUrl();
-                } catch (Exception e) {
-                    log.trace("", e);
-                    log.fatal(MSG_ERR_SRV_NAME_OR_NETWORK + " Error message: " + e.getMessage() + "\n");
-                    command.printHelp();
-                    return CODE_ERRROR;
-                }
-                command.checkParameters();
-            } catch (ParseException e) {
-                log.fatal("Command parameters are invalid: " + e.getMessage() + "\n");
-                command.printHelp();
-                return CODE_ERRROR;
-            } catch (CommandLineArgumentException e) {
-                log.fatal("Command parameters are invalid: " + e.getMessage() + "\n");
-                command.printHelp();
-                return CODE_ERRROR;
-            } catch (Exception e) {
-                log.fatal("Command parameters are invalid: " + e.getMessage() + "\n");
-                command.printHelp();
-                return CODE_ERRROR;
-            }
-
-
-            int exitCode = command.execute();
-            log.info("CxConsole scan session finished");
-            return exitCode;
-
-        } catch (org.apache.commons.cli.ParseException e) {
-            // Ignore, the exception is handled in above catch statement
-            return CODE_ERRROR;
-        } catch (Throwable e) {
-            log.error("Unexpected error occurred during console session.Error message:\n" + e.getMessage());
-            log.info("", e);
-            return CODE_ERRROR;
         }
+
+        int exitCode;
+        try {
+            exitCode = command.execute();
+            log.info("CxConsole session finished");
+            return exitCode;
+        } catch (CLICommandException e) {
+            log.error(e.getMessage());
+            return errorCodeResolver(e.getMessage());
+        }
+    }
+
+    private static void makeArgumentsLowCase(String[] argumentsLessCommandName) {
+        for (int i = 0; i < argumentsLessCommandName.length; i++) {
+            if (argumentsLessCommandName[i].startsWith("-")) {
+                argumentsLessCommandName[i] = argumentsLessCommandName[i].toLowerCase();
+            }
+        }
+    }
+
+    private static void initConfigurationManager(String[] args) {
+        int configIndx = Arrays.asList(args).indexOf("-config");
+        String confPath = null;
+        if (configIndx != -1 && args.length > (configIndx + 1) && args[configIndx + 1] != null && !args[configIndx + 1].startsWith("-")) {
+            confPath = args[configIndx + 1];
+        }
+        if (confPath != null) {
+            confPath = confPath.replace("..\\", "").replace("../", "");
+        }
+        ConfigMgr.initCfgMgr(confPath);
+    }
+
+
+    private static void validateVerboseParameter(String[] args) {
+        ArrayList<String> customArgs = new CustomStringList(Arrays.asList(args));
+        if (!customArgs.contains("-v".trim()) && !customArgs.contains("-verbose")) {
+            Appender caAppender = Logger.getRootLogger().getAppender("CA");
+            ((ConsoleAppender) caAppender).setThreshold(Level.ERROR);
+        } else {
+            log.info("Verbose mode is activated. All messages and events will be sent to the console or log file.");
+        }
+    }
+
+    public static String[] getArgumentsLessCommandName() {
+        return argumentsLessCommandName;
     }
 }
