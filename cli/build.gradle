@@ -14,8 +14,7 @@ apply plugin: 'java-library-distribution'
 
 repositories {
     maven { url 'http://cx-artifactory:8081/artifactory/libs-snapshot' }
-    maven { url 'http://cx-artifactory:8081/artifactory/libs-release' }
-}
+
 
 group = 'com.checkmarx'
 //For development purpose
